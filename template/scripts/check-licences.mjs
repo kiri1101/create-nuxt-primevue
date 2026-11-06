@@ -1,6 +1,6 @@
 // Licence guard. Plain ESM, Node built-ins only.
 // Fails closed: every installed Prime package must declare the exact licence "MIT".
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -56,11 +56,13 @@ export function findInstalled(rootDir) {
   function walkModules(modulesDir) {
     for (const entry of subdirs(modulesDir)) {
       const dir = join(modulesDir, entry.name)
-      if (entry.name === '.pnpm') {
+      if (entry.name === '.bin' || entry.name === '.cache') continue
+      if (entry.name.startsWith('.')) {
+        // Package stores: pnpm (.pnpm), Bun (.bun), Yarn (.store), and the like.
         for (const store of subdirs(dir)) walkModules(join(dir, store.name, 'node_modules'))
       } else if (entry.name.startsWith('@')) {
         for (const scoped of subdirs(dir)) visitPackage(join(dir, scoped.name))
-      } else if (!entry.name.startsWith('.')) {
+      } else {
         visitPackage(dir)
       }
     }
@@ -110,6 +112,17 @@ function main() {
   return 1
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+function runDirectly() {
+  if (!process.argv[1]) return false
+  const self = fileURLToPath(import.meta.url)
+  try {
+    // Node realpaths the module URL but not argv[1], so compare real paths.
+    return realpathSync(resolve(process.argv[1])) === realpathSync(self)
+  } catch {
+    return resolve(process.argv[1]) === self
+  }
+}
+
+if (runDirectly()) {
   process.exit(main())
 }

@@ -5,3 +5,4 @@ reports
 template/.nuxt
 template/.output
 template/node_modules
+template/package-lock.json

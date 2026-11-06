@@ -1,6 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   checkProject,
@@ -117,5 +119,37 @@ describe('checkProject', () => {
     project({ vue: '3.5.0' })
     pkg(join(root, 'node_modules/vue'), 'vue', 'MIT', '3.5.0')
     expect(checkProject(root).status).toBe('no-prime')
+  })
+})
+
+describe('guard in other package stores', () => {
+  it('finds a non-MIT package in a Bun isolated install', () => {
+    project({ primeicons: '7.0.0' })
+    pkg(join(root, 'node_modules/primeicons'), 'primeicons', 'MIT', '7.0.0')
+    pkg(join(root, 'node_modules/.bun/primevue@5.0.4/node_modules/primevue'), 'primevue', 'Commercial', '5.0.4')
+    const r = checkProject(root)
+    expect(r.status).toBe('offenders')
+    expect(r.offenders.map((o) => o.name)).toEqual(['primevue'])
+  })
+})
+
+describe('guard run as a script', () => {
+  it('still fails with exit 1 when started through a symlink or junction', () => {
+    project({ primevue: '5.0.4' })
+    pkg(join(root, 'node_modules/primevue'), 'primevue', 'Commercial', '5.0.4')
+    const scripts = join(root, 'scripts')
+    mkdirSync(scripts)
+    const source = join(dirname(fileURLToPath(import.meta.url)), '../template/scripts/check-licences.mjs')
+    copyFileSync(source, join(scripts, 'check-licences.mjs'))
+    const elsewhere = mkdtempSync(join(tmpdir(), 'link-'))
+    try {
+      const link = join(elsewhere, 'linked-scripts')
+      symlinkSync(scripts, link, 'junction')
+      const run = spawnSync(process.execPath, [join(link, 'check-licences.mjs')], { encoding: 'utf8' })
+      expect(run.status).toBe(1)
+      expect(run.stderr + run.stdout).toContain('primevue')
+    } finally {
+      rmSync(elsewhere, { recursive: true, force: true })
+    }
   })
 })
