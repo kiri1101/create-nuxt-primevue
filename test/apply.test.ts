@@ -75,9 +75,10 @@ describe('applyAnswers', () => {
 describe('pnpm workspace file', () => {
   // pnpm stops the install while a dependency has an install script nobody has reviewed. esbuild (a hard
   // dependency of Nitro) and fsevents (macOS) have one; the project needs neither script, so both are declined.
-  it('writes allowBuilds: false for esbuild and fsevents when the manager is pnpm', () => {
+  // strictDepBuilds: false makes a future unreviewed install script a warning instead of a failed install.
+  it('writes allowBuilds: false for esbuild and fsevents and strictDepBuilds: false when the manager is pnpm', () => {
     applyAnswers(dir, answers(), { name: 'pnpm', major: 11 })
-    expect(read('pnpm-workspace.yaml')).toBe(['allowBuilds:', '  esbuild: false', '  fsevents: false', ''].join('\n'))
+    expect(read('pnpm-workspace.yaml')).toBe(['allowBuilds:', '  esbuild: false', '  fsevents: false', 'strictDepBuilds: false', ''].join('\n'))
   })
   it.each([
     [{ name: 'npm', major: 10 }],

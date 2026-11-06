@@ -95,7 +95,10 @@ export const YARNRC = `nodeLinker: node-modules
  */
 export const INSTALL_SCRIPT_PACKAGES = ['esbuild', 'fsevents'] as const
 
-/** pnpm stops the install while any dependency has an install script nobody has reviewed, so each one is declined. */
+/**
+ * pnpm stops the install while any dependency has an install script nobody has reviewed, so each known one is declined.
+ * `strictDepBuilds: false` makes a script that appears later a warning instead of a failed install.
+ */
 export function renderPnpmWorkspace(): string {
-  return `allowBuilds:\n${INSTALL_SCRIPT_PACKAGES.map((name) => `  ${name}: false\n`).join('')}`
+  return `allowBuilds:\n${INSTALL_SCRIPT_PACKAGES.map((name) => `  ${name}: false\n`).join('')}strictDepBuilds: false\n`
 }
