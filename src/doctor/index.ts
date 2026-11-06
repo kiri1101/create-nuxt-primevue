@@ -167,7 +167,7 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
     return 1
   }
 
-  const pm = projectPackageManager(cwd, process.env.npm_config_user_agent)
+  const pm = projectPackageManager(cwd, process.env.npm_config_user_agent, process.env, process.argv[1])
   const undo = undoAdvice(pm)
   writeFileSync(pkgFile, applyChanges(readFileSync(pkgFile, 'utf8'), changes))
   log('✓ Pins updated in package.json')

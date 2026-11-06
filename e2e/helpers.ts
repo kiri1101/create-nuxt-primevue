@@ -135,28 +135,48 @@ ${commit.out}`)
   writeFileSync(marker, 'ok')
 }
 
-/** Starts `.output/server/index.mjs` on a free port. */
-export async function serve(dir: string): Promise<{ url: string; stop: () => Promise<void> }> {
+/** Starts `.output/server/index.mjs` on a free port. A failure carries the server's output and the last answer seen. */
+export async function serve(dir: string, waitMs = process.env.CI && process.platform === 'win32' ? 120_000 : 60_000): Promise<{ url: string; stop: () => Promise<void> }> {
   const port = await freePort()
   const child = spawn(process.execPath, [join('.output', 'server', 'index.mjs')], {
     cwd: dir,
     env: { ...process.env, PORT: String(port), NITRO_PORT: String(port), HOST: '127.0.0.1', NITRO_HOST: '127.0.0.1' },
-    stdio: 'ignore',
+    stdio: ['ignore', 'pipe', 'pipe'],
   })
+  let output = ''
+  const keep = (d: unknown) => (output = (output + String(d)).slice(-4000))
+  child.stdout?.on('data', keep)
+  child.stderr?.on('data', keep)
   let exited = false
-  child.on('exit', () => (exited = true))
+  let exitInfo = ''
+  child.on('exit', (code, signal) => {
+    exited = true
+    exitInfo = `code ${code} signal ${signal}`
+  })
+  child.on('error', (e) => {
+    exited = true
+    exitInfo = `spawn error ${String(e)}`
+  })
   const url = `http://127.0.0.1:${port}`
-  const deadline = Date.now() + 60_000
+  const deadline = Date.now() + waitMs
+  let last = 'no answer yet (connection refused until now)'
+  const report = (why: string) => `${why}
+cwd: ${dir}
+last answer: ${last}
+server output (last 4000 characters):
+${output || '(none)'}`
   for (;;) {
-    if (exited) throw new Error('the Nuxt server exited before it answered')
+    if (exited) throw new Error(report(`the Nuxt server exited before it answered (${exitInfo})`))
     try {
-      if ((await fetch(url)).ok) break
-    } catch {
-      // not listening yet
+      const res = await fetch(url)
+      if (res.ok) break
+      last = `HTTP ${res.status}: ${(await res.text()).slice(0, 500)}`
+    } catch (e) {
+      last = `fetch error: ${String(e)}${e instanceof Error && e.cause ? ` (${String(e.cause)})` : ''}`
     }
     if (Date.now() > deadline) {
       child.kill()
-      throw new Error('the Nuxt server did not answer within 60 seconds')
+      throw new Error(report(`the Nuxt server did not answer within ${waitMs / 1000} seconds`))
     }
     await new Promise((r) => setTimeout(r, 300))
   }

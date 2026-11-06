@@ -82,7 +82,7 @@ export async function create(argv: string[]): Promise<number> {
     return 1
   }
 
-  const pm = detectPackageManager(process.env.npm_config_user_agent)
+  const pm = detectPackageManager(process.env.npm_config_user_agent, process.env, process.argv[1])
   try {
     copyTemplate(TEMPLATE_DIR, target)
     applyAnswers(target, answers, pm)
