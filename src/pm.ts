@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { workspaceRoot } from '../template/scripts/check-licences.mjs'
 export type PackageManager = { name: 'npm' | 'pnpm' | 'yarn' | 'bun'; major: number | null }
 
 const NAMES = ['npm', 'pnpm', 'yarn', 'bun'] as const
@@ -20,4 +23,24 @@ export function installArgs(_pm: PackageManager): string[] {
 
 export function scriptArgs(_pm: PackageManager, script: string): string[] {
   return ['run', script]
+}
+
+const LOCKFILES: [string, PackageManager['name']][] = [
+  ['pnpm-lock.yaml', 'pnpm'],
+  ['yarn.lock', 'yarn'],
+  ['bun.lock', 'bun'],
+  ['bun.lockb', 'bun'],
+  ['package-lock.json', 'npm'],
+]
+
+/**
+ * The lockfile says which package manager a project uses; npx always reports npm. A workspace member keeps
+ * no lockfile of its own, so the workspace root is looked at too. Without a lockfile, the manager that ran us.
+ */
+export function projectPackageManager(dir: string, userAgent: string | undefined): PackageManager {
+  const root = workspaceRoot(dir)
+  for (const folder of root === undefined ? [dir] : [dir, root]) {
+    for (const [file, name] of LOCKFILES) if (existsSync(join(folder, file))) return { name, major: null }
+  }
+  return detectPackageManager(userAgent)
 }

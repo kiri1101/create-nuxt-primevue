@@ -42,6 +42,13 @@ describe('doctor --check', () => {
     project({ primevue: '4.5.5' })
     expect(await doctor(['--check'], dir)).toBe(1)
   })
+  it('exits 1 and names the package when one declared Prime package is missing but another is installed', async () => {
+    project({ primevue: '4.5.5', primeicons: '7.0.0' })
+    installed('primeicons', 'MIT')
+    expect(await doctor(['--check'], dir)).toBe(1)
+    expect(out.join('\n')).toContain('primevue')
+    expect(out.join('\n')).toContain('not found installed')
+  })
   it('exits 0 and says so when there are no Prime packages at all', async () => {
     project({ vue: '^3.5.0' })
     expect(await doctor(['--check'], dir)).toBe(0)

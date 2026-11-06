@@ -1,7 +1,8 @@
 // Licence guard. Plain ESM, Node built-ins only.
-// Fails closed: every installed Prime package must declare the exact licence "MIT".
-import { readdirSync, readFileSync, realpathSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+// Fails closed: every installed Prime package must declare the exact licence "MIT", and every Prime
+// package that package.json depends on must be found installed.
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const GUIDE = 'https://github.com/kiri1101/create-nuxt-primevue/blob/main/docs/traps.md'
@@ -15,74 +16,153 @@ export function isPrimePackage(name) {
   )
 }
 
-export function declaredPrimePackages(pkg) {
-  const names = new Set([
-    ...Object.keys(pkg.dependencies ?? {}),
-    ...Object.keys(pkg.devDependencies ?? {}),
-  ])
+function namesIn(pkg, sections) {
+  const names = new Set()
+  for (const section of sections) for (const name of Object.keys(pkg[section] ?? {})) names.add(name)
   return [...names].filter(isPrimePackage)
 }
 
+/** Prime packages the project depends on in any way, peer and optional ones included. */
+export function declaredPrimePackages(pkg) {
+  return namesIn(pkg, ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'])
+}
+
+/** Prime packages that must be installed: the dependencies and devDependencies. */
+export function requiredPrimePackages(pkg) {
+  return namesIn(pkg, ['dependencies', 'devDependencies'])
+}
+
+/** The parsed object; undefined when the file cannot be read; null when it is there but is not a JSON object. */
 function readJson(file) {
+  let text
   try {
-    // Stryker disable next-line StringLiteral: without an encoding readFileSync returns a Buffer, and JSON.parse turns it into the same text.
-    return JSON.parse(readFileSync(file, 'utf8'))
+    text = readFileSync(file).toString()
   } catch {
-    // Unreadable or invalid JSON gives undefined; every caller treats that as "no package.json".
+    return undefined
+  }
+  // Windows tools add a byte order mark, which npm accepts and JSON.parse does not.
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1)
+  try {
+    const value = JSON.parse(text)
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null
+  } catch {
+    return null
   }
 }
 
-function subdirs(dir) {
+function realPath(path) {
   try {
-    // Dirent.isDirectory() is false for symlinks and junctions, so links are never followed.
-    return readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory())
+    return realpathSync(path)
+  } catch {
+    return undefined
+  }
+}
+
+/** Folders and links to folders (including Windows junctions). Broken links are left out. */
+function subdirs(dir) {
+  let names
+  try {
+    names = readdirSync(dir)
   } catch {
     return []
+  }
+  return names.filter((name) => {
+    try {
+      return statSync(join(dir, name)).isDirectory()
+    } catch {
+      return false
+    }
+  })
+}
+
+/** The node_modules folder that holds a package folder. pnpm keeps a package's dependencies beside it. */
+function holdingModules(packageDir) {
+  const parent = dirname(packageDir)
+  if (basename(parent) === 'node_modules') return parent
+  const grandparent = dirname(parent)
+  return basename(parent).startsWith('@') && basename(grandparent) === 'node_modules' ? grandparent : undefined
+}
+
+/**
+ * The nearest folder above `startDir` that is a workspace root: it has a pnpm-workspace.yaml, or a
+ * package.json with a "workspaces" field. Undefined when there is none.
+ */
+export function workspaceRoot(startDir) {
+  let dir = resolve(startDir)
+  for (;;) {
+    const parent = dirname(dir)
+    if (parent === dir) return undefined
+    dir = parent
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir
+    if (readJson(join(dir, 'package.json'))?.workspaces !== undefined) return dir
   }
 }
 
 export function findInstalled(rootDir) {
   const found = []
-  const seen = new Set()
+  // Real paths already handled. Links are followed, so this is what stops loops and double reports.
+  const visited = new Set()
 
-  function visitPackage(dir) {
-    const pkg = readJson(join(dir, 'package.json'))
-    if (pkg && typeof pkg.name === 'string' && isPrimePackage(pkg.name) && !seen.has(dir)) {
-      // Stryker disable next-line CallExpression: links are never followed, so each folder is reached by one path only and is never visited twice.
-      seen.add(dir)
+  function once(path) {
+    const real = realPath(path)
+    if (real === undefined || visited.has(real)) return undefined
+    visited.add(real)
+    return real
+  }
+
+  function visitPackage(dir, folderName) {
+    const real = once(dir)
+    if (real === undefined) return
+    const pkg = readJson(join(real, 'package.json'))
+    if (pkg === null) {
+      // A package.json that cannot be parsed: trust the folder name rather than skip it.
+      if (isPrimePackage(folderName)) found.push({ name: folderName, version: '', license: undefined, dir })
+    } else if (pkg && typeof pkg.name === 'string' && isPrimePackage(pkg.name)) {
       found.push({ name: pkg.name, version: String(pkg.version ?? ''), license: pkg.license, dir })
     }
-    walkModules(join(dir, 'node_modules'))
+    const holder = holdingModules(real)
+    if (holder !== undefined) walkModules(holder)
+    walkModules(join(real, 'node_modules'))
   }
 
   function walkModules(modulesDir) {
-    for (const entry of subdirs(modulesDir)) {
-      const dir = join(modulesDir, entry.name)
-      if (entry.name === '.bin' || entry.name === '.cache') continue
-      if (entry.name.startsWith('.')) {
+    if (once(modulesDir) === undefined) return
+    for (const name of subdirs(modulesDir)) {
+      const dir = join(modulesDir, name)
+      if (name === '.bin' || name === '.cache') continue
+      if (name.startsWith('.')) {
         // Package stores: pnpm (.pnpm), Bun (.bun), Yarn (.store), and the like.
-        for (const store of subdirs(dir)) walkModules(join(dir, store.name, 'node_modules'))
-      } else if (entry.name.startsWith('@')) {
-        for (const scoped of subdirs(dir)) visitPackage(join(dir, scoped.name))
+        for (const store of subdirs(dir)) walkModules(join(dir, store, 'node_modules'))
+      } else if (name.startsWith('@')) {
+        for (const scoped of subdirs(dir)) visitPackage(join(dir, scoped), `${name}/${scoped}`)
       } else {
-        visitPackage(dir)
+        visitPackage(dir, name)
       }
     }
   }
 
   walkModules(join(rootDir, 'node_modules'))
+  // In a workspace, Node also resolves packages from the root's node_modules, where installs hoist them.
+  const workspace = workspaceRoot(rootDir)
+  if (workspace !== undefined) walkModules(join(workspace, 'node_modules'))
   return found
 }
 
 export function checkProject(rootDir) {
   const pkg = readJson(join(rootDir, 'package.json')) ?? {}
   const declared = declaredPrimePackages(pkg)
+  const required = requiredPrimePackages(pkg)
   const installed = findInstalled(rootDir)
   const offenders = installed.filter((p) => p.license !== 'MIT')
+  const present = new Set(installed.map((p) => p.name))
+  const missing = required.filter((name) => !present.has(name))
   let status
-  if (installed.length === 0) status = declared.length > 0 ? 'nothing-installed' : 'no-prime'
-  else status = offenders.length > 0 ? 'offenders' : 'ok'
-  return { status, offenders, installed }
+  if (installed.length === 0) {
+    if (required.length > 0) status = 'nothing-installed'
+    else status = declared.length > 0 ? 'ok' : 'no-prime'
+  } else if (offenders.length > 0) status = 'offenders'
+  else status = missing.length > 0 ? 'missing' : 'ok'
+  return { status, offenders, installed, missing }
 }
 
 function describeLicence(license) {
@@ -91,7 +171,7 @@ function describeLicence(license) {
 
 function main() {
   const rootDir = resolve(fileURLToPath(new URL('..', import.meta.url)))
-  const { status, offenders, installed } = checkProject(rootDir)
+  const { status, offenders, installed, missing } = checkProject(rootDir)
   if (status === 'ok') {
     console.log(`Licence check passed: ${installed.length} Prime package(s), all MIT.`)
     return 0
@@ -102,6 +182,13 @@ function main() {
   }
   if (status === 'nothing-installed') {
     console.error('Licence check FAILED: Prime packages are declared but none are installed, so nothing could be verified.')
+    console.error('Run your package manager install, then try again.')
+    console.error(`Guide: ${GUIDE}`)
+    return 1
+  }
+  if (status === 'missing') {
+    console.error('Licence check FAILED: these Prime packages are declared in package.json but were not found installed, so they could not be verified:')
+    for (const name of missing) console.error(`  ${name}`)
     console.error('Run your package manager install, then try again.')
     console.error(`Guide: ${GUIDE}`)
     return 1

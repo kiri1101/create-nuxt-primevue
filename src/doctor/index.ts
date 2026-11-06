@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { checkProject, declaredPrimePackages } from '../../template/scripts/check-licences.mjs'
-import { type PackageManager, detectPackageManager, installArgs, scriptArgs } from '../pm.ts'
+import { installArgs, projectPackageManager, scriptArgs } from '../pm.ts'
 import { capture, run } from '../run.ts'
 import { gitGate } from './gate.ts'
 import { GUARD_COMMAND, GUARD_FILE, addGuard, guardProblem } from './guard.ts'
@@ -15,19 +15,6 @@ const GUARD_SOURCE = fileURLToPath(new URL('../../template/scripts/check-licence
 const UNDO = 'To undo the change, run: git checkout .'
 
 const log = (line = '') => console.log(line)
-
-/** The lockfile says which package manager the project uses; npx always reports npm. */
-function projectPackageManager(dir: string): PackageManager {
-  const byLockfile: [string, PackageManager['name']][] = [
-    ['pnpm-lock.yaml', 'pnpm'],
-    ['yarn.lock', 'yarn'],
-    ['bun.lock', 'bun'],
-    ['bun.lockb', 'bun'],
-    ['package-lock.json', 'npm'],
-  ]
-  for (const [file, name] of byLockfile) if (existsSync(join(dir, file))) return { name, major: null }
-  return detectPackageManager(process.env.npm_config_user_agent)
-}
 
 async function confirm(message: string): Promise<boolean> {
   const answer = await p.confirm({ message, initialValue: false })
@@ -106,6 +93,12 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
     }
     return 1
   }
+  if (result.status === 'missing') {
+    console.error('These Prime packages are declared in package.json but were not found installed, so they could not be checked:')
+    for (const name of result.missing) console.error(`  ${name}`)
+    console.error('Install your dependencies first (for example "npm install"), then run doctor again.')
+    return 1
+  }
   if (result.status === 'ok') {
     log(`✓ ${result.installed.length} Prime package(s) installed, all on the MIT licence.`)
     printWarnings()
@@ -157,7 +150,7 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
   writeFileSync(pkgFile, applyChanges(readFileSync(pkgFile, 'utf8'), changes))
   log('✓ Pins updated in package.json')
 
-  const pm = projectPackageManager(cwd)
+  const pm = projectPackageManager(cwd, process.env.npm_config_user_agent)
   if ((await run(pm.name, installArgs(pm), cwd)) !== 0) {
     console.error(`✗ Install failed. ${UNDO}`)
     return 1
@@ -180,6 +173,7 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
     console.error('✗ The licence check still fails:')
     for (const o of after.offenders) console.error(`    ${o.name} ${o.version}  licence: ${JSON.stringify(o.license)}`)
     if (after.status === 'nothing-installed') console.error('    Nothing could be verified: no Prime packages are installed.')
+    for (const name of after.missing) console.error(`    ${name} is declared but was not found installed.`)
     console.error(UNDO)
     return 1
   }
