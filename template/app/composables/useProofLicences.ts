@@ -1,10 +1,11 @@
 import pkg from '~~/package.json'
 
 // The demo page reads the installed packages, so what it shows is what is really there. primevue has no
-// "./package.json" export to import, so the manifests are read as files.
+// "./package.json" export to import, so the manifests are read as files. Nuxt makes app/ the Vite root, so the
+// project's node_modules is two folders up; Vite skips node_modules folders unless `exhaustive` is set.
 const manifests = import.meta.glob<{ version?: string; license?: unknown }>(
-  '/node_modules/{primevue,@primevue/nuxt-module,@primeuix/themes,primeicons}/package.json',
-  { eager: true, import: 'default' },
+  '../../node_modules/{primevue,@primevue/nuxt-module,@primeuix/themes,primeicons}/package.json',
+  { eager: true, import: 'default', exhaustive: true },
 )
 const NAMES = ['primevue', '@primevue/nuxt-module', '@primeuix/themes', 'primeicons']
 
@@ -18,7 +19,7 @@ export interface LicenceRow {
 export function useProofLicences() {
   const declared = pkg.dependencies as Record<string, string>
   const rows: LicenceRow[] = NAMES.filter((name) => declared[name]).map((name) => {
-    const manifest = manifests[`/node_modules/${name}/package.json`]
+    const manifest = manifests[`../../node_modules/${name}/package.json`]
     const licence = manifest?.license === undefined ? null : typeof manifest.license === 'string' ? manifest.license : JSON.stringify(manifest.license)
     return { name, version: manifest?.version ?? (declared[name] as string), licence }
   })

@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -228,6 +228,35 @@ export async function licenceBadgeShown(url: string): Promise<boolean> {
   }
 }
 
+/**
+ * The proof page must read the installed packages: each of the four Prime packages shows its version and MIT,
+ * and the sentence that depends on all four being MIT appears. A page that shows "not checked" is a failure.
+ */
+export async function expectProofPage(dir: string): Promise<void> {
+  const deps = (JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as { dependencies: Record<string, string> }).dependencies
+  const names = ['primevue', '@primevue/nuxt-module', '@primeuix/themes', 'primeicons']
+  const server = await serve(dir)
+  try {
+    const { chromium } = await import('playwright')
+    const browser = await chromium.launch()
+    try {
+      const page = await browser.newPage()
+      await page.goto(server.url, { waitUntil: 'networkidle' })
+      const rows = await page.locator('table tr').allInnerTexts()
+      for (const name of names) {
+        const row = rows.find((r) => r.startsWith(`${name} `))
+        expect(row, `no row for ${name} in: ${JSON.stringify(rows)}`).toBeDefined()
+        expect(row?.replace(/\s+/g, ' ')).toBe(`${name} ${deps[name]} MIT`)
+      }
+      await page.getByText('every Prime package is on a free MIT version').waitFor({ state: 'visible', timeout: 5_000 })
+    } finally {
+      await browser.close()
+    }
+  } finally {
+    await server.stop()
+  }
+}
+
 /** The default create case: .gitignore written, one commit, no node_modules in git, and a passing build. */
 export async function checkDefaultCreate(): Promise<void> {
   const dir = await mainProject()
@@ -246,6 +275,7 @@ export async function checkDefaultCreate(): Promise<void> {
   expect(log.out.trim().split(/\r?\n/)).toHaveLength(1)
 
   await ensureBuilt(dir)
+  await expectProofPage(dir)
 }
 
 export function lockfileFor(dir: string): string[] {

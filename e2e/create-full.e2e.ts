@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { generateWithRetry, licenceBadgeShown, lockfileFor, quote, removeDir, serve, sh, shRetry, tarball, workRoot } from './helpers.ts'
+import { expectProofPage, generateWithRetry, licenceBadgeShown, lockfileFor, quote, removeDir, serve, sh, shRetry, tarball, workRoot } from './helpers.ts'
 
 // The option variants and package-manager runs are heavy, so they run only with E2E_FULL=1 (CI sets it).
 const FULL = process.env.E2E_FULL === '1'
@@ -106,6 +106,8 @@ describe.skipIf(!FULL)('create, one run per package manager', () => {
       } finally {
         await server.stop()
       }
+      // Under pnpm the top-level entries are symlinks; the page must still read them.
+      await expectProofPage(dir)
       for (const i of [1, 2, 3]) removeDir(join(workRoot(), `pm-${pm}-${i}`))
     })
   }
