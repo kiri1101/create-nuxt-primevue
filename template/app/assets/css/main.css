@@ -47,3 +47,9 @@
   }
   .dark body { background-color: var(--p-surface-950); }
 }
+
+@theme {
+  --breakpoint-sm: 640px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-2xl: 1600px;
+}
