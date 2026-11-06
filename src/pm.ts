@@ -48,11 +48,10 @@ function fromPackageManagerField(value: unknown): PackageManager | undefined {
 export function projectPackageManager(dir: string, userAgent: string | undefined): PackageManager {
   const root = workspaceRoot(dir)
   const folders = root === undefined ? [dir] : [dir, root]
+  // Innermost folder first, and in each folder the field before the lockfile.
   for (const folder of folders) {
     const declared = fromPackageManagerField(readPackageJson(folder)?.packageManager)
     if (declared) return declared
-  }
-  for (const folder of folders) {
     for (const [file, name] of LOCKFILES) if (existsSync(join(folder, file))) return { name, major: null }
   }
   return detectPackageManager(userAgent)

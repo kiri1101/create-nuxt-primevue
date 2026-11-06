@@ -87,6 +87,12 @@ describe('projectPackageManager: the packageManager field comes before any lockf
     writeFileSync(join(root, 'bun.lock'), '')
     expect(projectPackageManager(root, undefined)).toEqual({ name: 'bun', major: null })
   })
+  it('lets the member own lockfile outrank the field on the workspace root', () => {
+    pkg(root, { packageManager: 'pnpm@9.1.0', workspaces: ['apps/*'] })
+    pkg(join(root, 'apps/web'), { name: 'web' })
+    writeFileSync(join(root, 'apps/web/yarn.lock'), '')
+    expect(projectPackageManager(join(root, 'apps/web'), 'npm/10.0.0')).toEqual({ name: 'yarn', major: null })
+  })
   it('reads a two-digit major', () => {
     pkg(root, { packageManager: 'pnpm@10.2.0' })
     expect(projectPackageManager(root, undefined)).toEqual({ name: 'pnpm', major: 10 })
