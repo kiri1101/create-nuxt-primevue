@@ -38,8 +38,9 @@ async function gateProblem(dir: string): Promise<string | null> {
   const inside = await capture('git', ['rev-parse', '--is-inside-work-tree'], dir)
   const isRepo = inside.code === 0 && inside.stdout.trim() === 'true'
   const status = isRepo ? await capture('git', ['status', '--porcelain'], dir) : { code: 0, stdout: '' }
+  const tracked = isRepo && (await capture('git', ['ls-files', '--error-unmatch', 'package.json'], dir)).code === 0
   // If git status itself fails we cannot prove the tree is clean, so treat it as not clean.
-  return gitGate(isRepo, status.code === 0 ? status.stdout : 'unknown')
+  return gitGate(isRepo, status.code === 0 ? status.stdout : 'unknown', tracked)
 }
 
 /** Adds the two guard scripts, keeping the file's indentation, line endings and final newline. */

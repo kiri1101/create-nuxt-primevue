@@ -20,6 +20,14 @@ export async function create(argv: string[]): Promise<number> {
     return 1
   }
 
+  if (given.projectName !== undefined) {
+    const problem = validateProjectName(given.projectName)
+    if (problem) {
+      console.error(problem)
+      return 1
+    }
+  }
+
   let answers: Answers
   if (yes) {
     if (given.projectName === undefined) {
