@@ -61,3 +61,17 @@ jobs:
       - run: npm ci
       # Windows path handling and the .gitignore workaround matter most here: only the default case runs.
       - run: npx vitest run --config vitest.e2e.config.ts e2e/create.e2e.ts -t "default:"
+
+  # Unit tests only (about 2.5 minutes), so it runs in full: no incremental cache. The break threshold in
+  # stryker.config.json fails the job when the score drops.
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:mutation

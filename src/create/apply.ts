@@ -47,5 +47,6 @@ export function applyAnswers(dir: string, a: Answers, pm: PackageManager): void 
 
   // npm leaves .gitignore out of published packages, so it is always written here, before any `git add`.
   writeFileSync(join(dir, '.gitignore'), GITIGNORE)
+  // Stryker disable next-line ConditionalExpression: null >= 2 is false in JavaScript, so the null check is redundant for the result; it only documents the intent.
   if (pm.name === 'yarn' && pm.major !== null && pm.major >= 2) writeFileSync(join(dir, '.yarnrc.yml'), YARNRC)
 }

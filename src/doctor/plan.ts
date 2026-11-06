@@ -70,12 +70,14 @@ export function planFix(pkg: object, offenders: Installed[]): { changes: Change[
 
 // A minimal JSON scanner, so a version can be replaced in place without re-serialising the file.
 function skipWs(t: string, i: number): number {
+  // Stryker disable next-line ConditionalExpression,EqualityOperator: past the end t[i] is undefined, which is not whitespace, so the bound is redundant.
   while (i < t.length && /[\s﻿]/.test(t[i]!)) i++
   return i
 }
 function stringEnd(t: string, i: number): number {
   i++
   while (t[i] !== '"') {
+    // Stryker disable next-line EqualityOperator: at i === t.length the loop reads undefined and reaches the same throw one step later.
     if (i >= t.length) throw new Error('package.json is not valid JSON.')
     i += t[i] === '\\' ? 2 : 1
   }
@@ -85,6 +87,7 @@ function valueEnd(t: string, i: number): number {
   if (t[i] === '"') return stringEnd(t, i)
   if (t[i] === '{' || t[i] === '[') {
     let depth = 0
+    // Stryker disable next-line EqualityOperator: at i === t.length c is undefined, nothing changes, and the loop ends into the same throw.
     while (i < t.length) {
       const c = t[i]!
       if (c === '"') {
@@ -98,10 +101,12 @@ function valueEnd(t: string, i: number): number {
     }
     throw new Error('package.json is not valid JSON.')
   }
+  // Stryker disable next-line EqualityOperator: a scalar that runs to the end of the text is followed by a missing closing brace, which throws the same error either way.
   while (i < t.length && !/[\s,}\]]/.test(t[i]!)) i++
   return i
 }
 function members(t: string, objStart: number): { key: string; start: number; end: number }[] {
+  // Stryker disable next-line ArrayDeclaration: an extra non-object entry has no key, so the lookups by key never match it.
   const out: { key: string; start: number; end: number }[] = []
   let i = skipWs(t, objStart + 1)
   while (t[i] !== '}') {

@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.config.ts"
+  },
+  "mutate": [
+    "template/scripts/check-licences.mjs",
+    "src/doctor/plan.ts",
+    "src/doctor/gate.ts",
+    "src/create/options.ts",
+    "src/create/render.ts",
+    "src/create/apply.ts",
+    "src/pm.ts"
+  ],
+  "tsconfigFile": "tsconfig.stryker-unused.json",
+  "concurrency": 2,
+  "disableTypeChecks": false,
+  "coverageAnalysis": "perTest",
+  "reporters": [
+    "clear-text",
+    "progress",
+    "html"
+  ],
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 100
+  }
+}

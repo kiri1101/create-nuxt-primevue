@@ -25,9 +25,10 @@ export function declaredPrimePackages(pkg) {
 
 function readJson(file) {
   try {
+    // Stryker disable next-line StringLiteral: without an encoding readFileSync returns a Buffer, and JSON.parse turns it into the same text.
     return JSON.parse(readFileSync(file, 'utf8'))
   } catch {
-    return null
+    // Unreadable or invalid JSON gives undefined; every caller treats that as "no package.json".
   }
 }
 
@@ -47,6 +48,7 @@ export function findInstalled(rootDir) {
   function visitPackage(dir) {
     const pkg = readJson(join(dir, 'package.json'))
     if (pkg && typeof pkg.name === 'string' && isPrimePackage(pkg.name) && !seen.has(dir)) {
+      // Stryker disable next-line CallExpression: links are never followed, so each folder is reached by one path only and is never visited twice.
       seen.add(dir)
       found.push({ name: pkg.name, version: String(pkg.version ?? ''), license: pkg.license, dir })
     }

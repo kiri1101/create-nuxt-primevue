@@ -47,6 +47,7 @@ export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; ye
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string
+    // Stryker disable next-line StringLiteral,UnaryOperator: eq only matters when flag is compared with '--theme', '--primary' or '--font', which needs a '--' prefix anyway, so another prefix or sentinel value for other arguments changes nothing.
     const eq = arg.startsWith('--') ? arg.indexOf('=') : -1
     const flag = eq === -1 ? arg : arg.slice(0, eq)
 

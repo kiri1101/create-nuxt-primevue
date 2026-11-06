@@ -19,7 +19,8 @@
     "build": "tsc",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts"
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:mutation": "stryker run"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^10.1.1",
