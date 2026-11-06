@@ -58,7 +58,7 @@ If it finds non-MIT packages, it asks whether you have a PrimeUI licence key. If
 
 When the project passes, `doctor` can also offer to add the licence guard script. Nothing from this package is installed in your project: `npx` runs it temporarily.
 
-The guard also reads a workspace root's `node_modules` above the project, where installs hoist packages, but only for a true workspace member. A folder that is a git repository, or has its own `pnpm-workspace.yaml`, is treated as its own root and nothing above it is scanned. A generated project is treated as its own root: it is a git repository unless you pass `--no-git`, and under pnpm it has its own `pnpm-workspace.yaml`, even when it sits inside a pnpm workspace.
+The guard also reads a workspace root's `node_modules` above the project, where installs hoist packages, but only for a true workspace member. A folder that is a git repository (a submodule or worktree counts), or has its own `pnpm-workspace.yaml`, is treated as its own root and nothing above it is scanned. A generated project is treated as its own root: it is a git repository unless you pass `--no-git`, and under pnpm it has its own `pnpm-workspace.yaml`, even when it sits inside a pnpm workspace.
 
 ## The licence situation
 
@@ -77,7 +77,7 @@ As of 2026-11-06:
 
 ## The guide
 
-[docs/traps.md](https://github.com/kiri1101/create-nuxt-primevue/blob/main/docs/traps.md) covers the licence change in detail and twelve problems in this stack that fail without an error: Tailwind that does nothing, PrimeVue styles that beat your utilities, the red licence badge, half-applied dark mode, fonts that vanish in production and more. Each has the exact error text, the cause and the fix.
+[docs/traps.md](https://github.com/kiri1101/create-nuxt-primevue/blob/main/docs/traps.md) covers the licence change in detail and thirteen problems in this stack, most of which fail without an error: Tailwind that does nothing, PrimeVue styles that beat your utilities, the red licence badge, half-applied dark mode, fonts that vanish in production and more. Each has the exact error text, the cause and the fix.
 
 ## Flags
 

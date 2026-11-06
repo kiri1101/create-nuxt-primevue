@@ -1,6 +1,6 @@
 # Nuxt 4 + PrimeVue 4 + Tailwind 4: the silent traps
 
-Most failures in this stack raise no error. The build passes, the console is empty, and all you have is "it doesn't work". This guide lists the licence change that catches most people first, then twelve other problems, each as symptom, cause and fix. The exact error text is in the heading or the first line, so you can paste it into a search engine.
+Most failures in this stack raise no error. The build passes, the console is empty, and all you have is "it doesn't work". This guide lists the licence change that catches most people first, then thirteen other problems, each as symptom, cause and fix. The exact error text is in the heading or the first line, so you can paste it into a search engine.
 
 The versions this guide was checked against: Nuxt 4.x, Vue 3.5, PrimeVue 4.5.5, Tailwind CSS 4.3, the Node versions Nuxt supports (today `^22.22.3 || ^24.15.0 || >=26.0.0`). If your versions differ a lot, check the official documentation: it is more current than this file.
 
@@ -19,6 +19,7 @@ Contents
 - [10. Persisted state silently stops being saved](#10-persisted-state-silently-stops-being-saved)
 - [11. `<ClientOnly>` makes the page jump](#11-clientonly-makes-the-page-jump)
 - [12. `npm run build` exits with 255 in PowerShell](#12-npm-run-build-exits-with-255-in-powershell)
+- [13. `does not provide an export named 'mergeKeys'` on Windows](#13-does-not-provide-an-export-named-mergekeys-on-windows)
 
 ## The licence change
 
@@ -165,7 +166,7 @@ grep -c 'p-button' page.html            # more than 0: components rendered
 grep -c '@layer primevue' page.html     # more than 0: the layer setting is active
 ```
 
-This does not prove the licence is fine. The badge is added in the browser inside a closed shadow root, so a text search of the server HTML finds nothing even on v5. To check licences, run `npx create-nuxt-primevue doctor --check`. For a visual check, open the page in a browser and look for the badge, or for the `[PrimeUI]` message in the console.
+This does not prove the licence is fine. The badge may be added in the browser, inside a closed shadow root, so a text search of the server HTML can miss it even on v5. To check licences, run `npx create-nuxt-primevue doctor --check`. For a visual check, open the page in a browser and look for the badge, or for the `[PrimeUI]` message in the console.
 
 This generalises: in this stack most breakage is invisible at build time. Prefer a running page over a passing build when you are proving something works. Stop the server when you are done.
 
@@ -193,7 +194,7 @@ done
 
 ## 6. npm warns about unapproved install scripts for esbuild
 
-**Symptom:** on every install, npm warns that `esbuild` has an unapproved `postinstall` script and suggests approving it. The wording and the command depend on your npm version; recent versions say to run `npm install-scripts approve <pkg>`, and older notes call it `npm approve-scripts`.
+**Symptom:** on every install, npm warns that `esbuild` has an unapproved `postinstall` script and suggests approving it. The wording depends on your npm version; npm 11.19 accepts both `npm install-scripts approve <pkg>` and `npm approve-scripts <pkg>`.
 
 **Usually you do not need to approve it.** esbuild ships its binary as an optional dependency (`@esbuild/<platform>`), which installs without running a script. Its install script is only a fallback for platforms where that binary does not exist.
 
@@ -310,3 +311,23 @@ tail -25 build.log
 ```
 
 Related: searching a Nuxt build log for `error` also finds `error-404.mjs` and `error-500.mjs`, which are normal build output. Filter them out first: `grep -viE 'error-(404|500)'`.
+
+## 13. `does not provide an export named 'mergeKeys'` on Windows
+
+**Symptom:** the build passes, then every page returns HTTP 500 and the server log shows:
+
+```text
+import { mergeKeys } from '@primeuix/utils/classnames';
+SyntaxError: The requested module '@primeuix/utils/classnames' does not provide an export named 'mergeKeys'
+```
+
+**Cause:** the project was built from a Windows 8.3 short path, such as `C:\Users\RUNNER~1\AppData\Local\Temp\...`, and the build wrote the wrong import. `mergeKeys` lives in `@primeuix/utils/object`, and your installed packages are fine. On a GitHub Windows runner, the same project failed from the short path and worked from the long one. The step inside the build that writes the import has not been traced, so treat the short path as the proven trigger, not the full explanation.
+
+**Fix:** build from the long path. This mostly happens in CI scripts that build under the temp folder, because `os.tmpdir()` can return the short form there. Ask Node for the long one:
+
+```js
+import { realpathSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+
+const temp = realpathSync.native(tmpdir())
+```
