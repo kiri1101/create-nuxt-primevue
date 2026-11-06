@@ -85,6 +85,8 @@ Going back can break code that uses features only present in v5.
 
 When this guide was written, the Community licence was described as free for organisations with fewer than 5 developers, fewer than 10 employees and under $1M in revenue, and as excluding public-sector organisations. The last condition matters if you build for a government body or a public university. Check PrimeTek's current terms (https://primeui.dev/licenses) rather than relying on this summary: they can change, and this guide may be out of date.
 
+If you buy a licence and move to v5 on purpose, the guard in a generated project will fail the build, because it only accepts MIT. To remove it, delete `scripts/check-licences.mjs`, the `node scripts/check-licences.mjs &&` at the start of the `build` script, and the `check:licences` script in `package.json`.
+
 If you do hold a key, `doctor` asks about it and leaves your packages alone (unless you pass `--yes-fix`, which skips the question and applies the fix).
 
 ---

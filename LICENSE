@@ -19,3 +19,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+The template in this package bundles the Inter and Geist font files (template/public/fonts), which are
+licensed separately under the SIL Open Font License 1.1. Their licence texts ship beside them
+(OFL-Inter.txt, OFL-Geist.txt). Everything else in this repository is under the MIT licence above.

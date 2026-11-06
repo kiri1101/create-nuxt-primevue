@@ -30,12 +30,12 @@ export function applyAnswers(dir: string, a: Answers, pm: PackageManager): void 
   else if (a.font === 'geist') edit(config, /inter-latin-wght-normal\.woff2/, 'geist-latin-wght-normal.woff2')
 
   // Demo page.
-  const page = join(dir, 'app/pages/index.vue')
-  if (a.demo) {
-    edit(page, /const name = 'my-app'/, `const name = '${a.projectName}'`)
-  } else {
+  if (!a.demo) {
     rmSync(join(dir, 'app/components/demo'), { recursive: true, force: true })
-    writeFileSync(page, MINIMAL_PAGE)
+    rmSync(join(dir, 'app/composables/useProofLicences.ts'), { force: true })
+    writeFileSync(join(dir, 'app/pages/index.vue'), MINIMAL_PAGE)
+    // The 1600px breakpoint exists for the demo page only.
+    edit(join(dir, 'app/assets/css/main.css'), /\r?\n\/\* Breakpoint used only by the demo page\. \*\/\r?\n@theme \{[^}]*\}\r?\n/, '\n')
   }
 
   // Project identity.
@@ -43,7 +43,9 @@ export function applyAnswers(dir: string, a: Answers, pm: PackageManager): void 
   const pkg = JSON.parse(readFileSync(pkgFile, 'utf8')) as Record<string, unknown>
   pkg.name = a.projectName
   writeFileSync(pkgFile, `${JSON.stringify(pkg, null, 2)}\n`)
-  edit(join(dir, 'README.md'), /^# my-app/, `# ${a.projectName}`)
+  const readme = join(dir, 'README.md')
+  edit(readme, /^# my-app/, `# ${a.projectName}`)
+  edit(readme, /npm run /g, `${pm.name} run `)
 
   // npm leaves .gitignore out of published packages, so it is always written here, before any `git add`.
   writeFileSync(join(dir, '.gitignore'), GITIGNORE)

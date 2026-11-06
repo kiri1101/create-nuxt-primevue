@@ -15,8 +15,8 @@ export const themeInfo = { preset: '${preset}', primary: '${a.primary}', font: '
 const preset = definePreset(${preset}, {
   semantic: {
     primary: palette('${arg}'),
-    // Aura's default light primary (shade 500) is too pale for white text.
-    // Shade 700 keeps contrast above 4.5:1 for emerald, blue and violet.
+    // The preset's default light primary (shade 500) is too pale for white text.
+    // Shade 700 keeps contrast above 4.5:1 for emerald, blue and violet; check your own colour.
     colorScheme: {
       light: {
         primary: {
@@ -61,6 +61,8 @@ export function renderFontsCss(font: Answers['font']): string {
 }
 
 export const GITIGNORE = `node_modules
+.yarn/install-state.gz
+.pnp.*
 .nuxt
 .output
 .data

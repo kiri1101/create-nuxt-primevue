@@ -48,9 +48,9 @@ describe('applyAnswers: edge cases', () => {
     expect(() => applyAnswers(dir, answers(), npm)).not.toThrow()
   })
 
-  it('demo on puts the project name into the demo page and keeps the demo components', () => {
+  it('demo on keeps the demo components and does not hard-code a name', () => {
     applyAnswers(dir, answers(), npm)
-    expect(read('app/pages/index.vue')).toContain("const name = 'shiny-app'")
+    expect(read('app/pages/index.vue')).not.toContain("'my-app'")
     expect(existsSync(join(dir, 'app/components/demo'))).toBe(true)
   })
 
@@ -59,12 +59,13 @@ describe('applyAnswers: edge cases', () => {
     expect(() => applyAnswers(dir, answers({ demo: false }), npm)).not.toThrow()
   })
 
-  it('demo off writes a small valid page that greets the user', () => {
+  // Spec 5.4: without the demo, a minimal page with none of the demo components.
+  it('demo off writes a small valid page that uses no demo component', () => {
     applyAnswers(dir, answers({ demo: false }), npm)
     const page = read('app/pages/index.vue')
     expect(page).toContain('<template>')
     expect(page).toContain('</template>')
-    expect(page).toContain('Hello')
+    expect(page).not.toMatch(/<Demo|components\/demo/)
   })
 
   // Yarn 2+ defaults to Plug'n'Play, which the licence guard cannot read (doctor says so). The fix is
@@ -91,5 +92,47 @@ describe('applyAnswers: edge cases', () => {
   ] as const)('.yarnrc.yml for %j: %s', (pm, expected) => {
     applyAnswers(dir, answers(), pm)
     expect(existsSync(join(dir, '.yarnrc.yml'))).toBe(expected)
+  })
+})
+
+describe('applyAnswers: the generated README and demo follow the project', () => {
+  it('uses the detected manager in the README commands', () => {
+    applyAnswers(dir, answers(), { name: 'pnpm', major: 11 })
+    const readme = read('README.md')
+    expect(readme).toContain('`pnpm run dev`')
+    expect(readme).toContain('`pnpm run build`')
+    expect(readme).toContain('`pnpm run check:licences`')
+    expect(readme).not.toMatch(/(^|[^p])npm run/)
+  })
+  // The demo's licence rows read installed packages through this composable, so it goes with the demo.
+  it('demo off also removes the composable that only the demo uses, and demo on keeps it', () => {
+    applyAnswers(dir, answers(), npm)
+    expect(existsSync(join(dir, 'app/composables/useProofLicences.ts'))).toBe(true)
+    const other = join(root, 'nodemo')
+    copyTemplate(TEMPLATE, other)
+    applyAnswers(other, answers({ demo: false }), npm)
+    expect(existsSync(join(other, 'app/composables/useProofLicences.ts'))).toBe(false)
+  })
+  it('keeps npm commands for npm', () => {
+    applyAnswers(dir, answers(), npm)
+    expect(read('README.md')).toContain('`npm run dev`')
+  })
+  it('the demo takes the name from package.json instead of a hard-coded one', () => {
+    applyAnswers(dir, answers(), npm)
+    expect(read('app/pages/index.vue')).not.toContain("'my-app'")
+    expect(JSON.parse(read('package.json')).name).toBe('shiny-app')
+  })
+  // The demo needs a 1600px breakpoint. It is named for the demo, so a project without the demo keeps Tailwind's defaults.
+  it('keeps the demo breakpoint with the demo and removes it without', () => {
+    applyAnswers(dir, answers(), npm)
+    expect(read('app/assets/css/main.css')).toContain('--breakpoint-proof: 1600px;')
+    expect(read('app/assets/css/main.css')).not.toMatch(/--breakpoint-(sm|lg|2xl)/)
+  })
+  it('removes the demo breakpoint when the demo is off, and nothing else in main.css', () => {
+    const before = template('app/assets/css/main.css')
+    applyAnswers(dir, answers({ demo: false }), npm)
+    const after = read('app/assets/css/main.css')
+    expect(after).not.toContain('breakpoint')
+    expect(before.startsWith(after.trimEnd())).toBe(true)
   })
 })

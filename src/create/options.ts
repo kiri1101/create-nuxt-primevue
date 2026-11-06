@@ -26,6 +26,11 @@ export function validateProjectName(name: string): string | null {
   if (!/^[a-z0-9][a-z0-9._-]*$/.test(name) || name.length > 214) {
     return 'Use lowercase letters, digits, "-", "_" and "." only, starting with a letter or digit (it becomes the package name).'
   }
+  if (name.endsWith('.')) return 'The project name cannot end with a ".": Windows drops it.'
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(name.split('.')[0] as string)) {
+    return `"${name}" is a reserved name on Windows. Pick another.`
+  }
+  if (name === 'node_modules' || name === 'favicon.ico') return `"${name}" is not allowed as an npm package name.`
   return null
 }
 
@@ -40,10 +45,12 @@ function oneOf<T extends string>(flag: string, value: string, allowed: readonly 
   return undefined
 }
 
-export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; yes: boolean; errors: string[] } {
+export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; yes: boolean; help: boolean; version: boolean; errors: string[] } {
   const answers: Partial<Answers> = {}
   const errors: string[] = []
   let yes = false
+  let help = false
+  let version = false
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string
@@ -76,11 +83,13 @@ export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; ye
     else if (arg === '--git') answers.git = true
     else if (arg === '--no-git') answers.git = false
     else if (arg === '--yes' || arg === '-y') yes = true
+    else if (arg === '--help' || arg === '-h') help = true
+    else if (arg === '--version') version = true
     else if (arg.startsWith('-')) errors.push(`Unknown option ${arg}.`)
     else if (answers.projectName === undefined) answers.projectName = arg
     else errors.push(`Unexpected extra argument "${arg}".`)
   }
-  return { answers, yes, errors }
+  return { answers, yes, help, version, errors }
 }
 
 /**

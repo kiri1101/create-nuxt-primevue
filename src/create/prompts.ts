@@ -1,5 +1,6 @@
 import * as p from '@clack/prompts'
-import { type Answers, COLOURS, DEFAULTS, validatePrimary, validateProjectName } from './options.ts'
+import { type Answers, COLOURS, DEFAULTS, validatePrimary } from './options.ts'
+import { projectNameProblem } from './scaffold.ts'
 
 /**
  * Asks only for what flags did not already give. Returns null if the user cancels,
@@ -18,7 +19,7 @@ export async function askMissing(given: Partial<Answers>): Promise<Answers | nul
       message: 'Project name?',
       placeholder: 'my-app',
       defaultValue: 'my-app',
-      validate: (value) => validateProjectName(value || 'my-app') ?? undefined,
+      validate: (value) => projectNameProblem(value || 'my-app', process.cwd()) ?? undefined,
     })
     if (p.isCancel(v)) return cancelled()
     projectName = v || 'my-app'

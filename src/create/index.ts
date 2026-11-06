@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { detectPackageManager, installArgs, scriptArgs } from '../pm.ts'
@@ -7,17 +7,41 @@ import { applyAnswers } from './apply.ts'
 import { initRepo } from './git.ts'
 import { type Answers, DEFAULTS, decideYes, parseCreateArgs, validateProjectName } from './options.ts'
 import { askMissing } from './prompts.ts'
-import { copyTemplate, ensureEmptyTarget } from './scaffold.ts'
+import { copyTemplate, ensureEmptyTarget, projectNameProblem } from './scaffold.ts'
 
 // From src/create or dist/create, two levels up is the package root, where `template/` ships.
 const TEMPLATE_DIR = fileURLToPath(new URL('../../template', import.meta.url))
 
+export const USAGE = [
+  'Usage: create-nuxt-primevue [project-name] [options]',
+  '       create-nuxt-primevue doctor [--check | --yes-fix]',
+  '',
+  'Options:',
+  '  --theme <aura|lara|nora|material>   --primary <emerald|blue|violet|#rrggbb>',
+  '  --font <inter|geist|none>            --demo / --no-demo    --git / --no-git',
+  '  --yes, -y   accept the defaults for anything not given (needed without a terminal)',
+  '  --help, -h  show this text        --version   show the version',
+].join('\n')
+
+function packageVersion(): string {
+  const file = fileURLToPath(new URL('../../package.json', import.meta.url))
+  return (JSON.parse(readFileSync(file, 'utf8')) as { version: string }).version
+}
+
 /** Returns the process exit code. */
 export async function create(argv: string[]): Promise<number> {
-  const { answers: given, yes: yesFlag, errors } = parseCreateArgs(argv)
+  const { answers: given, yes: yesFlag, help, version, errors } = parseCreateArgs(argv)
   if (errors.length > 0) {
     for (const e of errors) console.error(e)
     return 1
+  }
+  if (help) {
+    console.log(USAGE)
+    return 0
+  }
+  if (version) {
+    console.log(packageVersion())
+    return 0
   }
   const { yes, problem: promptProblem } = decideYes(yesFlag, process.stdin.isTTY, process.env.npm_config_yes)
   if (promptProblem) {
@@ -26,7 +50,7 @@ export async function create(argv: string[]): Promise<number> {
   }
 
   if (given.projectName !== undefined) {
-    const problem = validateProjectName(given.projectName)
+    const problem = projectNameProblem(given.projectName, process.cwd())
     if (problem) {
       console.error(problem)
       return 1
@@ -63,8 +87,16 @@ export async function create(argv: string[]): Promise<number> {
   }
 
   const pm = detectPackageManager(process.env.npm_config_user_agent)
-  copyTemplate(TEMPLATE_DIR, target)
-  applyAnswers(target, answers, pm)
+  try {
+    copyTemplate(TEMPLATE_DIR, target)
+    applyAnswers(target, answers, pm)
+  } catch (e) {
+    // A half-written folder would block a retry, so it is removed.
+    rmSync(target, { recursive: true, force: true })
+    console.error(`Could not create the project: ${e instanceof Error ? e.message : String(e)}`)
+    console.error(`The folder ./${answers.projectName} was removed. Nothing else was changed.`)
+    return 1
+  }
   console.log(`\n✓ Project created in ./${answers.projectName}`)
   console.log('✓ Prime packages pinned to free MIT versions')
 

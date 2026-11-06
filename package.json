@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/kiri1101/create-nuxt-primevue#readme",
   "type": "module",
-  "license": "MIT",
+  "license": "MIT AND OFL-1.1",
   "author": "Jordan Tukum Folem",
   "bin": {
     "create-nuxt-primevue": "dist/cli.js"

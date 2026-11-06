@@ -53,6 +53,10 @@ async function offerGuard(dir: string): Promise<void> {
 
 /** Returns the process exit code: 0 fine, 1 a problem remains, 2 the project could not be scanned. */
 export async function doctor(argv: string[], cwd: string = process.cwd()): Promise<number> {
+  if (argv.includes('--help') || argv.includes('-h')) {
+    log('Usage: create-nuxt-primevue doctor [--check | --yes-fix]')
+    return 0
+  }
   const unknown = argv.filter((a) => a !== '--check' && a !== '--yes-fix')
   if (unknown.length > 0) {
     console.error(`Unknown option ${unknown[0]}. Usage: create-nuxt-primevue doctor [--check | --yes-fix]`)

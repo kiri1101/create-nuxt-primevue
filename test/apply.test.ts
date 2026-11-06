@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { applyAnswers } from '../src/create/apply.ts'
 import { DEFAULTS } from '../src/create/options.ts'
 import { MINIMAL_PAGE, renderFontsCss } from '../src/create/render.ts'
-import { copyTemplate, ensureEmptyTarget } from '../src/create/scaffold.ts'
+import { copyTemplate, ensureEmptyTarget, projectNameProblem } from '../src/create/scaffold.ts'
 import type { PackageManager } from '../src/pm.ts'
 
 const TEMPLATE = fileURLToPath(new URL('../template', import.meta.url))
@@ -104,5 +104,19 @@ describe('ensureEmptyTarget', () => {
     writeFileSync(join(root, 'full', 'a.txt'), 'keep')
     expect(ensureEmptyTarget(join(root, 'full'))).toBe(`${join(root, 'full')} already exists and is not empty. Pick another name or empty it first.`)
     expect(readFileSync(join(root, 'full', 'a.txt'), 'utf8')).toBe('keep')
+  })
+})
+
+describe('projectNameProblem: the name and the folder are checked as soon as the name is known', () => {
+  it('returns the name problem first', () => {
+    expect(projectNameProblem('My App', root)).toContain('lowercase letters')
+  })
+  it('refuses a folder that already has files', () => {
+    mkdirSync(join(root, 'taken'))
+    writeFileSync(join(root, 'taken', 'a.txt'), 'x')
+    expect(projectNameProblem('taken', root)).toBe(`${join(root, 'taken')} already exists and is not empty. Pick another name or empty it first.`)
+  })
+  it('accepts a new name', () => {
+    expect(projectNameProblem('fresh-app', root)).toBeNull()
   })
 })

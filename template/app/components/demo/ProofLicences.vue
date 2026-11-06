@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import pkg from '~~/package.json'
-
-const deps = pkg.dependencies as Record<string, string>
-const names = ['primevue', '@primevue/nuxt-module', '@primeuix/themes', 'primeicons']
-const rows = names.filter((n) => deps[n]).map((n) => ({ name: n, version: deps[n] }))
+const { rows } = useProofLicences()
 </script>
 
 <template>
@@ -12,7 +8,7 @@ const rows = names.filter((n) => deps[n]).map((n) => ({ name: n, version: deps[n
       <tbody>
         <tr v-for="r in rows" :key="r.name">
           <td class="py-0.5">{{ r.name }} {{ r.version }}</td>
-          <td class="py-0.5 pl-3 text-right whitespace-nowrap text-muted-color">MIT</td>
+          <td class="py-0.5 pl-3 text-right whitespace-nowrap text-muted-color">{{ r.licence ?? 'not checked' }}</td>
         </tr>
       </tbody>
     </table>

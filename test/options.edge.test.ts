@@ -99,3 +99,31 @@ describe('parseCreateArgs', () => {
     expect(r.errors).toStrictEqual(['Unexpected extra argument "second".'])
   })
 })
+
+describe('validateProjectName: names a file system or npm cannot use', () => {
+  // Windows reserves these device names, with or without an extension.
+  it.each(['con', 'prn', 'aux', 'nul', 'com1', 'com9', 'lpt1', 'lpt9', 'con.txt', 'nul.app'])('refuses the reserved Windows name %j', (name) => {
+    expect(validateProjectName(name)).toContain('reserved')
+  })
+  it.each(['com0', 'lpt0', 'console', 'my-con', 'com10'])('accepts %j', (name) => {
+    expect(validateProjectName(name)).toBeNull()
+  })
+  it('refuses a name that ends with a dot, which Windows drops', () => {
+    expect(validateProjectName('trailing.')).toContain('end with')
+  })
+  it.each(['node_modules', 'favicon.ico'])('refuses %j, which npm does not accept as a package name', (name) => {
+    expect(validateProjectName(name)).toContain('npm')
+  })
+})
+
+describe('parseCreateArgs: help and version', () => {
+  it.each(['--help', '-h'])('%s asks for the usage text', (flag) => {
+    expect(parseCreateArgs([flag])).toMatchObject({ help: true, errors: [] })
+  })
+  it('--version asks for the version', () => {
+    expect(parseCreateArgs(['--version'])).toMatchObject({ version: true, errors: [] })
+  })
+  it('are off by default', () => {
+    expect(parseCreateArgs(['my-app'])).toMatchObject({ help: false, version: false })
+  })
+})

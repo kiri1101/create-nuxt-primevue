@@ -5,7 +5,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'n
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const GUIDE = 'https://github.com/kiri1101/create-nuxt-primevue/blob/main/docs/traps.md'
+const GUIDE = 'https://github.com/kiri1101/create-nuxt-primevue/blob/main/docs/traps.md#the-licence-change'
 
 export function isPrimePackage(name) {
   return (

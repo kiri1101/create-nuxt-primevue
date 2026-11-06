@@ -20,6 +20,6 @@ Nuxt 4, PrimeVue 4 and Tailwind 4, on free MIT versions of every Prime package.
 
 `primevue`, `@primevue/nuxt-module`, `@primeuix/themes` and `primeicons` are pinned to exact versions on purpose. PrimeVue 5 and the newest versions of the other packages are under a commercial licence and show a red badge without a key. Before you upgrade any Prime package, check its `license` field. `npm run check:licences` fails the build if a non-MIT Prime package is installed.
 
-Do not run `npm i primevue@latest` unless you mean to leave the MIT versions. If that happens by accident, `npx create-nuxt-primevue doctor` can move the pins back.
+Do not install `primevue@latest` unless you mean to leave the MIT versions. If that happens by accident, `npx create-nuxt-primevue doctor` can move the pins back.
 
 More on this, and on other problems in this stack, in the guide: https://github.com/kiri1101/create-nuxt-primevue/blob/main/docs/traps.md

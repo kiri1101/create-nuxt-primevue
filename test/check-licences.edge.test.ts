@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { checkProject } from '../template/scripts/check-licences.mjs'
 
 const SOURCE = fileURLToPath(new URL('../template/scripts/check-licences.mjs', import.meta.url))
-const GUIDE = 'https://github.com/kiri1101/create-nuxt-primevue/blob/main/docs/traps.md'
+const GUIDE = 'https://github.com/kiri1101/create-nuxt-primevue/blob/main/docs/traps.md#the-licence-change'
 
 let root: string
 beforeEach(() => {

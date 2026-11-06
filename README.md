@@ -32,11 +32,11 @@ To skip the questions, pass flags: see [Flags](#flags).
 - Nuxt 4, `primevue` 4.5.5, `@primevue/nuxt-module` 4.5.5, `@primeuix/themes` 2.0.3 and `primeicons` 7.0.0, all pinned exactly, with Tailwind CSS 4 and `tailwindcss-primeui`.
 - CSS layers ordered so Tailwind utilities override PrimeVue styles without `!important`.
 - Dark mode that works in both libraries from one `.dark` class, stored with `@nuxtjs/color-mode`, with no flash on first load.
-- The theme in `app/theme.ts`. Light-mode primary colours use shade 700, which keeps white text above a 4.5:1 contrast ratio.
+- The theme in `app/theme.ts`. Light-mode primary colours use shade 700, which keeps white text above a 4.5:1 contrast ratio for the three preset colours (emerald, blue and violet). Check any custom hex colour yourself.
 - Inter or Geist, self-hosted from `public/fonts/` with their licence files. No calls to Google.
 - Three animations (`animate-fade-up`, `animate-shimmer`, `animate-pulse-soft`) that respect `prefers-reduced-motion`, one example directive and one custom Tailwind `@utility`.
 - `scripts/check-licences.mjs`, with no dependencies, run as the first step of the `build` script, so it runs with every package manager (and on its own as `npm run check:licences`).
-- A demo page that proves the setup. Delete `app/pages/index.vue` to start clean, or create with `--no-demo`.
+- A demo page that proves the setup. Replace `app/pages/index.vue` and delete `app/components/demo/` to start clean, or create with `--no-demo`.
 
 ## Fix an existing project: `doctor`
 
@@ -125,6 +125,6 @@ CI runs the unit tests on Ubuntu and Windows, the full end-to-end tests on Ubunt
 
 ## Credits and licences
 
-- This project is MIT licensed: see [LICENSE](https://github.com/kiri1101/create-nuxt-primevue/blob/main/LICENSE).
+- This project is MIT licensed: see [LICENSE](https://github.com/kiri1101/create-nuxt-primevue/blob/main/LICENSE). The npm package also bundles the Inter and Geist font files under the SIL Open Font License 1.1, so its licence is `MIT AND OFL-1.1`.
 - The fonts Inter and Geist are bundled in generated projects under the SIL Open Font License; the licence files are in `public/fonts/`.
 - [PrimeVue](https://primevue.org) is made by PrimeTek. [Nuxt](https://nuxt.com) is made by the Nuxt team. [Tailwind CSS](https://tailwindcss.com) is made by Tailwind Labs. This project is not affiliated with any of them.

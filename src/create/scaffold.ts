@@ -1,5 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs'
-import { basename, relative } from 'node:path'
+import { basename, relative, resolve } from 'node:path'
+import { validateProjectName } from './options.ts'
 
 const SKIP = new Set(['node_modules', '.nuxt', '.output'])
 
@@ -9,6 +10,11 @@ export function ensureEmptyTarget(path: string): string | null {
   if (!statSync(path).isDirectory()) return `${path} already exists and is not a folder.`
   if (readdirSync(path).length > 0) return `${path} already exists and is not empty. Pick another name or empty it first.`
   return null
+}
+
+/** The first problem with a project name or its target folder under `cwd`, or null. */
+export function projectNameProblem(name: string, cwd: string): string | null {
+  return validateProjectName(name) ?? ensureEmptyTarget(resolve(cwd, name))
 }
 
 export function copyTemplate(from: string, to: string): void {

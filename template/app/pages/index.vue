@@ -8,15 +8,15 @@ function toggleMode() {
   colorMode.preference = isDark.value ? 'light' : 'dark'
 }
 
-const deps = pkg.dependencies as Record<string, string>
+const { allMit, version } = useProofLicences()
 const hasFont = themeInfo.font.toLowerCase() !== 'none'
-const name = 'my-app'
+const name = pkg.name
 const code = 'font-mono text-[.84em] font-medium [overflow-wrap:anywhere]'
 useHead({ title: name })
 </script>
 
 <template>
-  <div class="mx-auto max-w-290 px-4 pt-4 pb-12 sm:px-8 sm:pt-5 sm:pb-14 lg:px-10 lg:pt-6 lg:pb-16 2xl:max-w-390 2xl:px-16 2xl:pt-8 2xl:pb-18">
+  <div class="mx-auto max-w-290 px-4 pt-4 pb-12 sm:px-8 sm:pt-5 sm:pb-14 lg:px-10 lg:pt-6 lg:pb-16 proof:max-w-390 proof:px-16 proof:pt-8 proof:pb-18">
     <header class="flex items-center justify-between gap-3 pb-4">
       <span class="font-bold">{{ name }}</span>
       <ClientOnly>
@@ -34,16 +34,16 @@ useHead({ title: name })
       </ClientOnly>
     </header>
 
-    <div class="2xl:grid 2xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] 2xl:items-start 2xl:gap-22">
-      <section class="py-8 pb-9 2xl:sticky 2xl:top-8 2xl:pt-12">
-        <h1 class="m-0 text-[clamp(2.5rem,11vw,4.75rem)] leading-[1.02] font-extrabold tracking-[-.035em] text-primary sm:text-[clamp(2.5rem,8.4vw,4.75rem)] 2xl:text-[5.75rem]">
+    <div class="proof:grid proof:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] proof:items-start proof:gap-22">
+      <section class="py-8 pb-9 proof:sticky proof:top-8 proof:pt-12">
+        <h1 class="m-0 text-[clamp(2.5rem,11vw,4.75rem)] leading-[1.02] font-extrabold tracking-[-.035em] text-primary sm:text-[clamp(2.5rem,8.4vw,4.75rem)] proof:text-[5.75rem]">
           Everything's wired up.
         </h1>
         <p class="mt-4.5 mb-0 max-w-[56ch] text-lg">
-          Nuxt 4, PrimeVue {{ deps.primevue }} and Tailwind 4 are running together, and every Prime package is on a free MIT version.
+          Nuxt 4, PrimeVue {{ version('primevue') }} and Tailwind 4 are running together<template v-if="allMit">, and every Prime package is on a free MIT version</template>.
         </p>
         <p class="mt-2.5 mb-0 max-w-[56ch] text-muted-color">
-          This page is only a demo. Delete <code :class="code">app/pages/index.vue</code> to start clean.
+          This page is only a demo. Replace <code :class="code">app/pages/index.vue</code> with your own page and delete <code :class="code">app/components/demo/</code> to start clean.
         </p>
       </section>
 
@@ -86,10 +86,10 @@ useHead({ title: name })
             <i class="pi pi-search" />
             <i class="pi pi-bars" />
           </div>
-          <p class="mt-2 mb-0 text-[.9375rem] text-muted-color">PrimeIcons {{ deps.primeicons }}, the last MIT version.</p>
+          <p class="mt-2 mb-0 text-[.9375rem] text-muted-color">PrimeIcons {{ version('primeicons') }}.</p>
         </DemoProofRow>
 
-        <DemoProofRow name="Licences" where="npm run check:licences" :index="7">
+        <DemoProofRow name="Licences" where="scripts/check-licences.mjs" :index="7">
           <DemoProofLicences />
         </DemoProofRow>
       </main>
