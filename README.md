@@ -58,6 +58,8 @@ If it finds non-MIT packages, it asks whether you have a PrimeUI licence key. If
 
 When the project passes, `doctor` can also offer to add the licence guard script. Nothing from this package is installed in your project: `npx` runs it temporarily.
 
+The guard also reads a workspace root's `node_modules` above the project, where installs hoist packages, but only for a true workspace member. A folder that is a git repository, or has its own `pnpm-workspace.yaml`, is treated as its own root and nothing above it is scanned. A generated project is treated as its own root: it is a git repository unless you pass `--no-git`, and under pnpm it has its own `pnpm-workspace.yaml`, even when it sits inside a pnpm workspace.
+
 ## The licence situation
 
 From PrimeVue 5.0.0, PrimeTek publishes the library under its commercial PrimeUI licence. That is their decision, and this tool does not work around it. It keeps you on versions that are still MIT, and tells you if you leave them.
