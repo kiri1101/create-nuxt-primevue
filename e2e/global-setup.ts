@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { freemem, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { TestProject } from 'vitest/node'
@@ -20,7 +20,11 @@ export default async function setup(project: TestProject) {
   // E2E_WORKDIR keeps the generated project between runs, to run the chain in stages. It is not deleted.
   const kept = process.env.E2E_WORKDIR
   if (kept) mkdirSync(kept, { recursive: true })
-  const workRoot = kept ?? mkdtempSync(join(tmpdir(), 'cnp-e2e-'))
+  // On the Windows runner os.tmpdir() is an 8.3 short path (C:\Users\RUNNER~1\...) and a Nuxt build from there
+  // imports a module from the wrong subpath, so builds run from the long path.
+  const base = realpathSync.native(tmpdir())
+  console.log(`[e2e] test folders are created under ${base}`)
+  const workRoot = kept ?? mkdtempSync(join(base, 'cnp-e2e-'))
   project.provide('workRoot', workRoot)
   project.provide('tarball', await packTarball(workRoot))
   if (kept) return () => {}

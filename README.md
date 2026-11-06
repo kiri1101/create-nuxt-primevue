@@ -17,7 +17,7 @@ Why it exists: `npm install primevue` now installs version 5, which is no longer
 npm create nuxt-primevue@latest my-app
 ```
 
-This is the same as `npx create-nuxt-primevue my-app`. It asks for the project name if you did not give one, then for the theme, primary colour, font and whether to keep the demo page. It copies the template, installs with the package manager you ran it with (npm, pnpm, Yarn or Bun), runs the licence check, and makes one git commit (unless you pass `--no-git`, or the folder is already inside a repository). Needs a Node version that Nuxt supports (today `^22.22.3 || ^24.15.0 || >=26.0.0`); the CLI checks this when it starts.
+This is the same as `npx create-nuxt-primevue my-app`. It asks for the project name if you did not give one, then for the theme, primary colour, font and whether to keep the demo page. It copies the template, installs with the package manager you ran it with (npm, pnpm or Yarn; for Bun, run `bunx create-nuxt-primevue my-app --pm bun`, because `bunx` does not tell the CLI who launched it), runs the licence check, and makes one git commit (unless you pass `--no-git`, or the folder is already inside a repository). Needs a Node version that Nuxt supports (today `^22.22.3 || ^24.15.0 || >=26.0.0`); the CLI checks this when it starts.
 
 Without a terminal (a script or CI) it cannot ask its questions, so it needs `--yes`. npm keeps a bare `--yes` for itself, so put the flags after `--`:
 
@@ -94,6 +94,7 @@ npx create-nuxt-primevue my-app --theme aura --primary emerald --font inter --ye
 | `--font` | `inter`, `geist`, `none` (system font stack) | `inter` |
 | `--demo` / `--no-demo` | keep the demo page, or start with an empty page | demo |
 | `--git` / `--no-git` | make a git repository and one commit, or skip it | git |
+| `--pm` | `npm`, `pnpm`, `yarn`, `bun`. Bun users run `bunx create-nuxt-primevue my-app --pm bun`: `bunx` does not tell the CLI who launched it | the manager you ran it with |
 | `--yes`, `-y` | accept the defaults for anything not given, and ask nothing | |
 
 With `--yes` the project name is required. The name must be one new folder, lowercase letters, digits, `-`, `_` and `.`. The CLI refuses a name it cannot use, or a folder that is not empty, before it writes anything.

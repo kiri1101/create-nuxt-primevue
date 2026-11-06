@@ -1,5 +1,6 @@
 export const THEMES = ['aura', 'lara', 'nora', 'material'] as const
 export const COLOURS = ['emerald', 'blue', 'violet'] as const
+export const PACKAGE_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'] as const
 export const FONTS = ['inter', 'geist', 'none'] as const
 
 export type Answers = {
@@ -45,10 +46,11 @@ function oneOf<T extends string>(flag: string, value: string, allowed: readonly 
   return undefined
 }
 
-export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; yes: boolean; help: boolean; version: boolean; errors: string[] } {
+export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; yes: boolean; pm: (typeof PACKAGE_MANAGERS)[number] | undefined; help: boolean; version: boolean; errors: string[] } {
   const answers: Partial<Answers> = {}
   const errors: string[] = []
   let yes = false
+  let pm: (typeof PACKAGE_MANAGERS)[number] | undefined
   let help = false
   let version = false
 
@@ -59,7 +61,7 @@ export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; ye
     const eq = arg.startsWith('--') ? equals : -1
     const flag = eq === -1 ? arg : arg.slice(0, eq)
 
-    if (flag === '--theme' || flag === '--primary' || flag === '--font') {
+    if (flag === '--theme' || flag === '--primary' || flag === '--font' || flag === '--pm') {
       let value: string | undefined
       if (eq !== -1) value = arg.slice(eq + 1)
       else if (argv[i + 1] !== undefined && !argv[i + 1]!.startsWith('--')) value = argv[++i]
@@ -70,6 +72,8 @@ export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; ye
       if (flag === '--theme') {
         const v = oneOf(flag, value, THEMES, errors)
         if (v) answers.theme = v
+      } else if (flag === '--pm') {
+        pm = oneOf(flag, value, PACKAGE_MANAGERS, errors) ?? pm
       } else if (flag === '--font') {
         const v = oneOf(flag, value, FONTS, errors)
         if (v) answers.font = v
@@ -89,7 +93,7 @@ export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; ye
     else if (answers.projectName === undefined) answers.projectName = arg
     else errors.push(`Unexpected extra argument "${arg}".`)
   }
-  return { answers, yes, help, version, errors }
+  return { answers, yes, pm, help, version, errors }
 }
 
 /**

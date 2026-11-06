@@ -31,6 +31,24 @@ describe('parseCreateArgs', () => {
     expect(r.errors).toHaveLength(1)
     expect(r.errors[0]).toContain('--theme')
   })
+  it.each(['npm', 'pnpm', 'yarn', 'bun'])('reads --pm %s, spaced and with =', (name) => {
+    expect(parseCreateArgs(['--pm', name]).pm).toBe(name)
+    expect(parseCreateArgs([`--pm=${name}`]).pm).toBe(name)
+    expect(parseCreateArgs(['--pm', name]).errors).toEqual([])
+  })
+  it('leaves pm unset without the flag, and keeps it out of the answers', () => {
+    const r = parseCreateArgs(['my-app', '--pm', 'bun'])
+    expect(parseCreateArgs(['my-app']).pm).toBeUndefined()
+    expect(r.answers).toEqual({ projectName: 'my-app' })
+  })
+  it('reports a bad --pm value once, naming the flag, and sets nothing', () => {
+    const r = parseCreateArgs(['--pm', 'deno'])
+    expect(r.errors).toEqual(['--pm: "deno" is not one of npm, pnpm, yarn, bun.'])
+    expect(r.pm).toBeUndefined()
+  })
+  it('reports --pm with no value', () => {
+    expect(parseCreateArgs(['--pm']).errors).toEqual(['--pm: a value is required.'])
+  })
 })
 
 describe('decideYes: create must never wait for a prompt that nobody can answer', () => {

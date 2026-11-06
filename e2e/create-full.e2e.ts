@@ -48,15 +48,14 @@ for (const pm of MANAGERS) {
  */
 async function generateWith(pm: (typeof MANAGERS)[number], version: string, base: string, name: string): Promise<{ dir: string; via: string }> {
   // Yarn Berry refuses to create a lockfile when CI is set. A real project commits yarn.lock in its first commit; this is a test setting only.
-  // The outer `npx vitest` leaves an npm user agent in the environment; a real `bunx` run has none, so bun is run without it.
   const env: Record<string, string> =
-    pm === 'yarn' ? { YARN_ENABLE_IMMUTABLE_INSTALLS: 'false' } : pm === 'bun' ? { npm_config_user_agent: '', npm_execpath: '' } : {}
+    pm === 'yarn' ? { YARN_ENABLE_IMMUTABLE_INSTALLS: 'false' } : {}
   mkdirSync(base, { recursive: true })
   const tgz = tarball()
   const runner: Record<string, string> = {
     pnpm: `pnpm dlx "${tgz}" ${name} --yes`,
     yarn: `yarn dlx -p "${tgz}" create-nuxt-primevue ${name} --yes`,
-    bun: `bunx --package "${tgz}" create-nuxt-primevue ${name} --yes`,
+    bun: `bunx --package "${tgz}" create-nuxt-primevue ${name} --yes --pm bun`,
   }
   const direct = await sh(runner[pm] as string, base, env)
   if (direct.code === 0 && existsSync(join(base, name, 'package.json'))) return { dir: join(base, name), via: `${pm} dlx` }

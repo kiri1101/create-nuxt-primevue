@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { detectPackageManager, installArgs, scriptArgs } from '../pm.ts'
+import { packageManagerFor, installArgs, scriptArgs } from '../pm.ts'
 import { run } from '../run.ts'
 import { applyAnswers } from './apply.ts'
 import { initRepo } from './git.ts'
@@ -20,13 +20,14 @@ export const USAGE = [
   'Options:',
   '  --theme <aura|lara|nora|material>   --primary <emerald|blue|violet|#rrggbb>',
   '  --font <inter|geist|none>            --demo / --no-demo    --git / --no-git',
+  '  --pm <npm|pnpm|yarn|bun>             package manager to install with (bunx needs --pm bun)',
   '  --yes, -y   accept the defaults for anything not given (needed without a terminal)',
   '  --help, -h  show this text        --version   show the version',
 ].join('\n')
 
 /** Returns the process exit code. */
 export async function create(argv: string[]): Promise<number> {
-  const { answers: given, yes: yesFlag, help, version, errors } = parseCreateArgs(argv)
+  const { answers: given, yes: yesFlag, pm: pmFlag, help, version, errors } = parseCreateArgs(argv)
   if (errors.length > 0) {
     for (const e of errors) console.error(e)
     return 1
@@ -82,7 +83,7 @@ export async function create(argv: string[]): Promise<number> {
     return 1
   }
 
-  const pm = detectPackageManager(process.env.npm_config_user_agent, process.env, process.argv[1])
+  const pm = packageManagerFor(pmFlag, process.env.npm_config_user_agent)
   try {
     copyTemplate(TEMPLATE_DIR, target)
     applyAnswers(target, answers, pm)

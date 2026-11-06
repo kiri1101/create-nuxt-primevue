@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { detectPackageManager, projectPackageManager } from '../src/pm.ts'
+import { detectPackageManager, packageManagerFor, projectPackageManager } from '../src/pm.ts'
 
 describe('detectPackageManager', () => {
   it.each([
@@ -14,33 +14,26 @@ describe('detectPackageManager', () => {
   ] as const)('%s', (ua, name, major) => {
     expect(detectPackageManager(ua)).toEqual({ name, major })
   })
+})
 
-  // bunx runs the #!/usr/bin/env node entry under Node and (as the first CI run showed) does not set a bun user agent,
-  // so the user agent is empty or a stale npm one inherited from an outer npm. Other signals must still find bun.
+describe('packageManagerFor: --pm wins over the user agent', () => {
   it.each([
-    ['no user agent, run from bunx', undefined, { _: '/home/runner/.bun/bin/bunx' }],
-    ['a stale npm user agent, run from bunx', 'npm/10.9.9 node/v22', { _: '/usr/local/bin/bunx' }],
-    ['an empty user agent, bun as npm_execpath', '', { npm_execpath: '/home/u/.bun/bin/bun' }],
-    ['Windows bun.exe', undefined, { npm_execpath: String.raw`C:\Users\u\.bun\bin\bun.exe` }],
-  ] as const)('bun is found from the environment: %s', (_label, ua, env) => {
-    expect(detectPackageManager(ua, env)).toEqual({ name: 'bun', major: null })
+    ['pnpm', undefined, { name: 'pnpm', major: null }],
+    ['bun', 'npm/10.9.9 node/v22', { name: 'bun', major: null }],
+    ['npm', 'pnpm/9.1.0 npm/? node/v22', { name: 'npm', major: null }],
+    ['pnpm', 'pnpm/9.1.0 npm/? node/v22', { name: 'pnpm', major: 9 }],
+    ['yarn', 'yarn/4.5.0 npm/? node/v22', { name: 'yarn', major: 4 }],
+    ['yarn', 'yarn/1.22.0 npm/? node/v22', { name: 'yarn', major: 1 }],
+    ['yarn', undefined, { name: 'yarn', major: 2 }],
+    ['yarn', 'pnpm/9.1.0 npm/? node/v22', { name: 'yarn', major: 2 }],
+    ['yarn', 'yarn', { name: 'yarn', major: 2 }],
+  ] as const)('--pm %s with user agent %s', (flag, ua, expected) => {
+    expect(packageManagerFor(flag, ua)).toEqual(expected)
   })
 
-  it('bun is found from the bunx cache folder the CLI runs from, even with no other sign', () => {
-    expect(detectPackageManager(undefined, {}, '/tmp/bunx-1001-create-nuxt-primevue@latest/node_modules/create-nuxt-primevue/dist/cli.js')).toEqual({ name: 'bun', major: null })
-    expect(detectPackageManager('npm/10.9.9 node/v22', {}, String.raw`C:\Temp\bunx-0-create-nuxt-primevue\node_modules\x\cli.js`)).toEqual({ name: 'bun', major: null })
-  })
-
-  it('an ordinary install path is not mistaken for bunx', () => {
-    expect(detectPackageManager(undefined, {}, '/home/u/project/node_modules/create-nuxt-primevue/dist/cli.js')).toEqual({ name: 'npm', major: null })
-  })
-
-  it('a pnpm user agent wins over a bun-looking environment', () => {
-    expect(detectPackageManager('pnpm/9.1.0 npm/? node/v22', { _: '/x/bunx' })).toEqual({ name: 'pnpm', major: 9 })
-  })
-
-  it('a plain npm environment stays npm', () => {
-    expect(detectPackageManager('npm/10.9.9 node/v22', { _: '/usr/bin/npx', npm_execpath: '/usr/lib/node_modules/npm/bin/npx-cli.js' })).toEqual({ name: 'npm', major: 10 })
+  it('without --pm it is the user agent', () => {
+    expect(packageManagerFor(undefined, 'pnpm/9.1.0 npm/? node/v22')).toEqual({ name: 'pnpm', major: 9 })
+    expect(packageManagerFor(undefined, undefined)).toEqual({ name: 'npm', major: null })
   })
 })
 
