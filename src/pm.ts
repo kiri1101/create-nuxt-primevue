@@ -36,7 +36,7 @@ const LOCKFILES: [string, PackageManager['name']][] = [
 
 /** `pnpm@9.1.0+sha512...` (the field corepack reads) as a package manager, or undefined when it is not one of the four. */
 function fromPackageManagerField(value: unknown): PackageManager | undefined {
-  const match = typeof value === 'string' ? /^(npm|pnpm|yarn|bun)@(\d+)/.exec(value) : null
+  const match = /^(npm|pnpm|yarn|bun)@(\d+)/.exec(String(value))
   return match ? { name: match[1] as PackageManager['name'], major: Number(match[2]) } : undefined
 }
 

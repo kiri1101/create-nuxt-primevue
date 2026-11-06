@@ -10,7 +10,7 @@ export function parsePackageJson(text: string): unknown {
 export function readPackageJson(dir: string): Record<string, unknown> | null {
   try {
     const value = parsePackageJson(readFileSync(join(dir, 'package.json')).toString())
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
+    return typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
   } catch {
     return null
   }

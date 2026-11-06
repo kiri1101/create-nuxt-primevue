@@ -79,6 +79,22 @@ describe('the guard run as a script: exit codes and messages', () => {
     expect(r.err).toContain(`Guide: ${GUIDE}`)
   })
 
+  it('fails with exit 1 and lists each declared package that was not found installed', async () => {
+    declare({ primevue: '4.5.5', primeicons: '7.0.0' })
+    install('primeicons', 'MIT', '7.0.0')
+    const r = await runGuard()
+    expect(r.codes).toStrictEqual([1])
+    expect(r.out).toBe('')
+    expect(r.err).toBe(
+      [
+        'Licence check FAILED: these Prime packages are declared in package.json but were not found installed, so they could not be verified:',
+        '  primevue',
+        'Run your package manager install, then try again.',
+        `Guide: ${GUIDE}`,
+      ].join('\n'),
+    )
+  })
+
   it('fails with exit 1, naming each offender, its version and licence, and the guide link', async () => {
     declare({ primevue: '5.0.4', primeicons: '7.0.0' })
     install('primevue', 'SEE LICENSE IN LICENSE.md', '5.0.4')

@@ -44,43 +44,38 @@ function readJson(file) {
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1)
   try {
     const value = JSON.parse(text)
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null
+    return typeof value === 'object' && !Array.isArray(value) ? value : null
   } catch {
     return null
   }
 }
 
+/** The real path of something that exists, or undefined when it does not (or is a link that leads nowhere). */
 function realPath(path) {
-  try {
-    return realpathSync(path)
-  } catch {
-    return undefined
-  }
+  return existsSync(path) ? realpathSync(path) : undefined
 }
 
-/** Folders and links to folders (including Windows junctions). Broken links are left out. */
+function isDirectory(path) {
+  return statSync(path, { throwIfNoEntry: false })?.isDirectory() === true
+}
+
+/** The names inside a folder, or none when it is not one. Files and broken links among them are harmless: nothing is found in them. */
 function subdirs(dir) {
-  let names
-  try {
-    names = readdirSync(dir)
-  } catch {
-    return []
-  }
-  return names.filter((name) => {
-    try {
-      return statSync(join(dir, name)).isDirectory()
-    } catch {
-      return false
-    }
-  })
+  // Stryker disable next-line ArrayDeclaration: an entry in place of [] names a path that does not exist, where nothing is found.
+  return isDirectory(dir) ? readdirSync(dir) : []
 }
 
-/** The node_modules folder that holds a package folder. pnpm keeps a package's dependencies beside it. */
-function holdingModules(packageDir) {
+/**
+ * The node_modules folders to walk for a package folder: the one inside it, and the one that holds it when
+ * it sits directly in one (pnpm keeps a package's dependencies beside it).
+ */
+function modulesAround(packageDir) {
+  const own = join(packageDir, 'node_modules')
   const parent = dirname(packageDir)
-  if (basename(parent) === 'node_modules') return parent
+  if (basename(parent) === 'node_modules') return [own, parent]
   const grandparent = dirname(parent)
-  return basename(parent).startsWith('@') && basename(grandparent) === 'node_modules' ? grandparent : undefined
+  if (basename(parent).startsWith('@') && basename(grandparent) === 'node_modules') return [own, grandparent]
+  return [own]
 }
 
 /**
@@ -105,6 +100,7 @@ export function findInstalled(rootDir) {
 
   function once(path) {
     const real = realPath(path)
+    // Stryker disable next-line ConditionalExpression: with the first test false, an undefined path is remembered once and returns undefined all the same.
     if (real === undefined || visited.has(real)) return undefined
     visited.add(real)
     return real
@@ -120,9 +116,7 @@ export function findInstalled(rootDir) {
     } else if (pkg && typeof pkg.name === 'string' && isPrimePackage(pkg.name)) {
       found.push({ name: pkg.name, version: String(pkg.version ?? ''), license: pkg.license, dir })
     }
-    const holder = holdingModules(real)
-    if (holder !== undefined) walkModules(holder)
-    walkModules(join(real, 'node_modules'))
+    for (const modulesDir of modulesAround(real)) walkModules(modulesDir)
   }
 
   function walkModules(modulesDir) {

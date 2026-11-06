@@ -87,6 +87,15 @@ describe('projectPackageManager: the packageManager field comes before any lockf
     writeFileSync(join(root, 'bun.lock'), '')
     expect(projectPackageManager(root, undefined)).toEqual({ name: 'bun', major: null })
   })
+  it('reads a two-digit major', () => {
+    pkg(root, { packageManager: 'pnpm@10.2.0' })
+    expect(projectPackageManager(root, undefined)).toEqual({ name: 'pnpm', major: 10 })
+  })
+  it('ignores a field that only mentions a manager after other text', () => {
+    pkg(root, { packageManager: 'use pnpm@9.0.0' })
+    writeFileSync(join(root, 'bun.lock'), '')
+    expect(projectPackageManager(root, undefined).name).toBe('bun')
+  })
   it('does not read a package.json that is broken', () => {
     mkdirSync(root, { recursive: true })
     writeFileSync(join(root, 'package.json'), '{ nope')

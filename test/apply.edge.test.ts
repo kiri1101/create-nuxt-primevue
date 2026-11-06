@@ -81,8 +81,8 @@ describe('applyAnswers: edge cases', () => {
   })
 
   it('fails loudly, naming the file, when the README heading is not at the very start', () => {
-    writeFileSync(join(dir, 'README.md'), 'Intro\n# my-app\n')
-    expect(() => applyAnswers(dir, answers(), npm)).toThrow(/Template changed: .* no longer matches in .*README\.md/)
+    writeFileSync(join(dir, 'README.md'), 'Intro\n# my-app\nnpm run dev\n')
+    expect(() => applyAnswers(dir, answers(), npm)).toThrow(/Template changed: \/\^# my-app\/ no longer matches in .*README\.md/)
   })
 
   it.each([
@@ -113,6 +113,10 @@ describe('applyAnswers: the generated README and demo follow the project', () =>
     applyAnswers(other, answers({ demo: false }), npm)
     expect(existsSync(join(other, 'app/composables/useProofLicences.ts'))).toBe(false)
   })
+  it('demo off does not fail when the demo composable is already gone', () => {
+    rmSync(join(dir, 'app/composables/useProofLicences.ts'))
+    expect(() => applyAnswers(dir, answers({ demo: false }), npm)).not.toThrow()
+  })
   it('keeps npm commands for npm', () => {
     applyAnswers(dir, answers(), npm)
     expect(read('README.md')).toContain('`npm run dev`')
@@ -133,6 +137,6 @@ describe('applyAnswers: the generated README and demo follow the project', () =>
     applyAnswers(dir, answers({ demo: false }), npm)
     const after = read('app/assets/css/main.css')
     expect(after).not.toContain('breakpoint')
-    expect(before.startsWith(after.trimEnd())).toBe(true)
+    expect(after).toBe(before.slice(0, before.indexOf('\n/* Breakpoint used only')))
   })
 })

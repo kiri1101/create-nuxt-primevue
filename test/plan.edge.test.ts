@@ -12,6 +12,7 @@ describe('planFix: overrides that block an automatic fix', () => {
     (key) => {
       const r = planFix(dep({ overrides: { [key]: '4.5.5' } }), primevue)
       expect(r.changes).toEqual([])
+      expect(r.indirect).toEqual([])
       expect(r.manual).toHaveLength(1)
       expect(r.manual[0]).toContain('overrides')
     },

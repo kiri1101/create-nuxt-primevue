@@ -35,7 +35,7 @@ export function applyAnswers(dir: string, a: Answers, pm: PackageManager): void 
     rmSync(join(dir, 'app/composables/useProofLicences.ts'), { force: true })
     writeFileSync(join(dir, 'app/pages/index.vue'), MINIMAL_PAGE)
     // The 1600px breakpoint exists for the demo page only.
-    edit(join(dir, 'app/assets/css/main.css'), /\r?\n\/\* Breakpoint used only by the demo page\. \*\/\r?\n@theme \{[^}]*\}\r?\n/, '\n')
+    edit(join(dir, 'app/assets/css/main.css'), /\r?\n\/\* Breakpoint used only by the demo page\. \*\/\r?\n@theme \{[^}]*\}\r?\n/, '')
   }
 
   // Project identity.

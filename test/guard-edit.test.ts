@@ -73,6 +73,9 @@ describe('guardProblem: when the guard must not be added', () => {
     expect(guardProblem(pkg('\n    "dev": "x"\n'), false)).toContain('no "build" script')
     expect(guardProblem('{ "name": "x" }', false)).toContain('no "build" script')
   })
+  it('treats scripts that is not an object as no build script', () => {
+    expect(guardProblem('{ "scripts": "x" }', false)).toContain('no "build" script')
+  })
   it('refuses when build is not a string', () => {
     expect(guardProblem('{ "scripts": { "build": 5 } }', false)).toContain('not a string')
   })
