@@ -4,8 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULTS } from '../src/create/options.ts'
 import { renderFontsCss, renderTheme } from '../src/create/render.ts'
 
-// Git on Windows may check the template out with CRLF; the committed blob is LF.
-const tpl = (p: string) => readFileSync(fileURLToPath(new URL(`../template/${p}`, import.meta.url)), 'utf8').replace(/\r\n/g, '\n')
+const tpl = (p: string) => readFileSync(fileURLToPath(new URL(`../template/${p}`, import.meta.url)), 'utf8')
 const base = { projectName: 'x', ...DEFAULTS }
 
 describe('renderTheme', () => {
