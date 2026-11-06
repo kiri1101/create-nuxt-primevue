@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { INSTALL_SCRIPT_PACKAGES } from '../src/create/render.ts'
@@ -7,7 +7,9 @@ import { PINS } from '../src/doctor/plan.ts'
 
 const tpl = (p: string) => readFileSync(fileURLToPath(new URL(`../template/${p}`, import.meta.url)), 'utf8')
 const pkg = JSON.parse(tpl('package.json')) as { scripts: Record<string, string>; dependencies: Record<string, string>; engines: { node: string } }
-const lock = JSON.parse(tpl('package-lock.json')) as { packages: Record<string, { hasInstallScript?: boolean }> }
+// The template lockfile is git-ignored: it exists only where the template has been installed once (npm install in template/).
+const lockFile = fileURLToPath(new URL('../template/package-lock.json', import.meta.url))
+const lockExists = existsSync(lockFile)
 
 describe('the template runs the licence guard on every package manager', () => {
   // Spec goal 3. Yarn 2+ does not run "pre" hooks for user scripts, so the guard is part of the build script itself.
@@ -36,7 +38,8 @@ describe('template stays in sync with the code that repeats it', () => {
   })
 
   // pnpm refuses to install while any dependency has an unreviewed install script, so applyAnswers lists them all.
-  it('pnpm is told about every package in the template tree that has an install script, plus fsevents', () => {
+  it.skipIf(!lockExists)('pnpm is told about every package in the template tree that has an install script, plus fsevents', () => {
+    const lock = JSON.parse(tpl('package-lock.json')) as { packages: Record<string, { hasInstallScript?: boolean }> }
     const found = new Set(
       Object.entries(lock.packages)
         .filter(([, v]) => v.hasInstallScript)
