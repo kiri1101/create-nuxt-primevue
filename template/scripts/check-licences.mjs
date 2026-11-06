@@ -81,9 +81,12 @@ function modulesAround(packageDir) {
 /**
  * The nearest folder above `startDir` that is a workspace root: it has a pnpm-workspace.yaml, or a
  * package.json with a "workspaces" field. Undefined when there is none.
+ * A folder that is a git repository (`.git`, a folder or a file) or has its own pnpm-workspace.yaml is its own
+ * root: nothing above it is looked at, so an unrelated parent cannot fail a healthy project.
  */
 export function workspaceRoot(startDir) {
   let dir = resolve(startDir)
+  if (existsSync(join(dir, '.git')) || existsSync(join(dir, 'pnpm-workspace.yaml'))) return undefined
   for (;;) {
     const parent = dirname(dir)
     if (parent === dir) return undefined
@@ -100,8 +103,9 @@ export function findInstalled(rootDir) {
 
   function once(path) {
     const real = realPath(path)
-    // Stryker disable next-line ConditionalExpression: with the first test false, an undefined path is remembered once and returns undefined all the same.
-    if (real === undefined || visited.has(real)) return undefined
+    // Stryker disable next-line ConditionalExpression: with this test false, an undefined path is remembered once and returns undefined all the same.
+    if (real === undefined) return undefined
+    if (visited.has(real)) return undefined
     visited.add(real)
     return real
   }

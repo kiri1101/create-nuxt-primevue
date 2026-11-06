@@ -189,6 +189,35 @@ describe('links that lead nowhere', () => {
   })
 })
 
+describe('a project that is its own root does not scan the folders above it', () => {
+  const project = () => join(root, 'proj')
+  beforeEach(() => {
+    // An unrelated parent that looks like a workspace root, holding a commercial copy.
+    write(root, { name: 'ws', private: true, workspaces: ['other/*'] })
+    pkg(join(root, 'node_modules/primevue'), 'primevue', 'SEE LICENSE IN LICENSE.md', '5.0.4')
+    write(project(), { name: 'proj', dependencies: { primevue: '4.5.5' } })
+    pkg(join(project(), 'node_modules/primevue'), 'primevue', 'MIT')
+  })
+
+  it('stops at a folder with .git', () => {
+    mkdirSync(join(project(), '.git'))
+    expect(checkProject(project()).status).toBe('ok')
+  })
+  it('stops at a folder with a .git file, as in a git worktree or submodule', () => {
+    writeFileSync(join(project(), '.git'), 'gitdir: ../elsewhere')
+    expect(checkProject(project()).status).toBe('ok')
+  })
+  it('stops at a folder with its own pnpm-workspace.yaml', () => {
+    writeFileSync(join(project(), 'pnpm-workspace.yaml'), 'allowBuilds: {}')
+    expect(checkProject(project()).status).toBe('ok')
+  })
+  it('still scans the root for a real workspace member with neither', () => {
+    const r = checkProject(project())
+    expect(r.status).toBe('offenders')
+    expect(r.offenders.map((o) => o.name)).toEqual(['primevue'])
+  })
+})
+
 describe('workspaceRoot', () => {
   it('is the nearest folder above with pnpm-workspace.yaml or a "workspaces" field', () => {
     write(root, { name: 'outer', workspaces: ['packages/*'] })
