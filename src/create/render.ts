@@ -85,3 +85,15 @@ export const MINIMAL_PAGE = `<template>
 
 export const YARNRC = `nodeLinker: node-modules
 `
+
+/**
+ * Packages in the template's install tree that have an install script (`hasInstallScript` in
+ * template/package-lock.json), plus fsevents, which macOS installs. Neither script is needed to build or run
+ * the project. A test keeps this list in step with the lockfile.
+ */
+export const INSTALL_SCRIPT_PACKAGES = ['esbuild', 'fsevents'] as const
+
+/** pnpm stops the install while any dependency has an install script nobody has reviewed, so each one is declined. */
+export function renderPnpmWorkspace(): string {
+  return `allowBuilds:\n${INSTALL_SCRIPT_PACKAGES.map((name) => `  ${name}: false\n`).join('')}`
+}

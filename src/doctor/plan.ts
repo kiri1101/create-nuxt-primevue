@@ -69,7 +69,7 @@ export function planFix(pkg: object, offenders: Installed[]): { changes: Change[
 }
 
 // A minimal JSON scanner, so a version can be replaced in place without re-serialising the file.
-function skipWs(t: string, i: number): number {
+export function skipWs(t: string, i: number): number {
   // Stryker disable next-line ConditionalExpression,EqualityOperator: past the end t[i] is undefined, which is not whitespace, so the bound is redundant.
   while (i < t.length && /[\s﻿]/.test(t[i]!)) i++
   return i
@@ -105,19 +105,20 @@ function valueEnd(t: string, i: number): number {
   while (i < t.length && !/[\s,}\]]/.test(t[i]!)) i++
   return i
 }
-function members(t: string, objStart: number): { key: string; start: number; end: number }[] {
+export function members(t: string, objStart: number): { key: string; keyStart: number; start: number; end: number }[] {
   // Stryker disable next-line ArrayDeclaration: an extra non-object entry has no key, so the lookups by key never match it.
-  const out: { key: string; start: number; end: number }[] = []
+  const out: { key: string; keyStart: number; start: number; end: number }[] = []
   let i = skipWs(t, objStart + 1)
   while (t[i] !== '}') {
     if (t[i] !== '"') throw new Error('package.json is not valid JSON.')
+    const keyStart = i
     const keyEnd = stringEnd(t, i)
     const key = JSON.parse(t.slice(i, keyEnd)) as string
     i = skipWs(t, keyEnd)
     if (t[i] !== ':') throw new Error('package.json is not valid JSON.')
     const start = skipWs(t, i + 1)
     const end = valueEnd(t, start)
-    out.push({ key, start, end })
+    out.push({ key, keyStart, start, end })
     i = skipWs(t, end)
     if (t[i] === ',') i = skipWs(t, i + 1)
   }

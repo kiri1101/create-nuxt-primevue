@@ -6,12 +6,12 @@ import { checkProject, declaredPrimePackages } from '../../template/scripts/chec
 import { type PackageManager, detectPackageManager, installArgs, scriptArgs } from '../pm.ts'
 import { capture, run } from '../run.ts'
 import { gitGate } from './gate.ts'
+import { GUARD_COMMAND, GUARD_FILE, addGuard, guardProblem } from './guard.ts'
 import { applyChanges, planFix } from './plan.ts'
 import { setupWarnings } from './warnings.ts'
 
 // From src/doctor or dist/doctor, two levels up is the package root, where `template/` ships.
 const GUARD_SOURCE = fileURLToPath(new URL('../../template/scripts/check-licences.mjs', import.meta.url))
-const GUARD_SCRIPT = 'node scripts/check-licences.mjs'
 const UNDO = 'To undo the change, run: git checkout .'
 
 const log = (line = '') => console.log(line)
@@ -43,36 +43,22 @@ async function gateProblem(dir: string): Promise<string | null> {
   return gitGate(isRepo, status.code === 0 ? status.stdout : 'unknown', tracked)
 }
 
-/** Adds the two guard scripts, keeping the file's indentation, line endings and final newline. */
-function addGuardScripts(text: string): string {
-  const pkg = JSON.parse(text) as { scripts?: Record<string, string> }
-  pkg.scripts = { ...pkg.scripts, 'check:licences': GUARD_SCRIPT, prebuild: GUARD_SCRIPT }
-  const indent = /^([ \t]+)"/m.exec(text)?.[1] ?? '  '
-  let out = JSON.stringify(pkg, null, indent)
-  if (text.includes('\r\n')) out = out.replace(/\n/g, '\r\n')
-  if (/\r?\n$/.test(text)) out += text.endsWith('\r\n') ? '\r\n' : '\n'
-  return out
-}
-
-function guardProblem(dir: string, pkgText: string): string | null {
-  const scripts = (JSON.parse(pkgText) as { scripts?: Record<string, string> }).scripts ?? {}
-  if (existsSync(join(dir, 'scripts', 'check-licences.mjs'))) return 'scripts/check-licences.mjs already exists, so it was not overwritten.'
-  if (scripts.prebuild !== undefined) return 'Your package.json already has a "prebuild" script, so the guard was not added. Add "node scripts/check-licences.mjs" to it yourself.'
-  return null
-}
-
 async function offerGuard(dir: string): Promise<void> {
   const file = join(dir, 'package.json')
   const text = readFileSync(file, 'utf8')
-  const problem = guardProblem(dir, text)
+  const problem = guardProblem(text, existsSync(join(dir, GUARD_FILE)))
   if (problem) return log(`- ${problem}`)
+  const edit = addGuard(text)
   log('\nThe licence guard fails your build if a non-MIT Prime package is ever installed. Adding it will:')
-  log('  copy scripts/check-licences.mjs')
-  log('  add the scripts "check:licences" and "prebuild" to package.json')
+  log(`  copy ${GUARD_FILE}`)
+  log('  change the "build" script in package.json (nothing else in the file changes):')
+  log(`    - "build": ${JSON.stringify(edit.before)}`)
+  log(`    + "build": ${JSON.stringify(edit.after)}`)
+  log(`  add the script "check:licences": ${JSON.stringify(GUARD_COMMAND)}`)
   if (!(await confirm('Add the licence guard to this project?'))) return log('- Guard not added.')
   mkdirSync(join(dir, 'scripts'), { recursive: true })
-  copyFileSync(GUARD_SOURCE, join(dir, 'scripts', 'check-licences.mjs'))
-  writeFileSync(file, addGuardScripts(text))
+  copyFileSync(GUARD_SOURCE, join(dir, GUARD_FILE))
+  writeFileSync(file, edit.text)
   log('✓ Licence guard added.')
 }
 

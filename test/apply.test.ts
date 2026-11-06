@@ -72,6 +72,23 @@ describe('applyAnswers', () => {
   })
 })
 
+describe('pnpm workspace file', () => {
+  // pnpm stops the install while a dependency has an install script nobody has reviewed. esbuild (a hard
+  // dependency of Nitro) and fsevents (macOS) have one; the project needs neither script, so both are declined.
+  it('writes allowBuilds: false for esbuild and fsevents when the manager is pnpm', () => {
+    applyAnswers(dir, answers(), { name: 'pnpm', major: 11 })
+    expect(read('pnpm-workspace.yaml')).toBe(['allowBuilds:', '  esbuild: false', '  fsevents: false', ''].join('\n'))
+  })
+  it.each([
+    [{ name: 'npm', major: 10 }],
+    [{ name: 'yarn', major: 4 }],
+    [{ name: 'bun', major: 1 }],
+  ] as const)('writes no pnpm-workspace.yaml for %j', (pm) => {
+    applyAnswers(dir, answers(), pm)
+    expect(existsSync(join(dir, 'pnpm-workspace.yaml'))).toBe(false)
+  })
+})
+
 describe('ensureEmptyTarget', () => {
   it('accepts a missing folder and an empty folder', () => {
     expect(ensureEmptyTarget(join(root, 'missing'))).toBeNull()

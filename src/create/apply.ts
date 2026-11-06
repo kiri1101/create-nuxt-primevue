@@ -2,7 +2,7 @@ import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { PackageManager } from '../pm.ts'
 import type { Answers } from './options.ts'
-import { GITIGNORE, MINIMAL_PAGE, YARNRC, renderFontsCss, renderTheme } from './render.ts'
+import { GITIGNORE, MINIMAL_PAGE, YARNRC, renderFontsCss, renderPnpmWorkspace, renderTheme } from './render.ts'
 
 const FONT_FILES = {
   inter: ['inter-latin-wght-normal.woff2', 'OFL-Inter.txt'],
@@ -47,6 +47,7 @@ export function applyAnswers(dir: string, a: Answers, pm: PackageManager): void 
 
   // npm leaves .gitignore out of published packages, so it is always written here, before any `git add`.
   writeFileSync(join(dir, '.gitignore'), GITIGNORE)
-  // Stryker disable next-line ConditionalExpression: null >= 2 is false in JavaScript, so the null check is redundant for the result; it only documents the intent.
-  if (pm.name === 'yarn' && pm.major !== null && pm.major >= 2) writeFileSync(join(dir, '.yarnrc.yml'), YARNRC)
+  // Yarn 2 and later default to Plug'n'Play, which the licence guard cannot read; an unknown version is treated as Yarn 1.
+  if (pm.name === 'yarn' && (pm.major ?? 0) >= 2) writeFileSync(join(dir, '.yarnrc.yml'), YARNRC)
+  if (pm.name === 'pnpm') writeFileSync(join(dir, 'pnpm-workspace.yaml'), renderPnpmWorkspace())
 }

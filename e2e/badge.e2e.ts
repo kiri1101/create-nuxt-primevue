@@ -48,7 +48,7 @@ describe('PrimeUI licence badge and the licence guard', () => {
   it('POSITIVE CONTROL: badge is shown once primevue 5 is installed', async () => {
     const dir = await mainProject()
     await ensureV5(dir)
-    // `npx nuxt build` skips the `prebuild` licence guard, which would stop this build.
+    // `npx nuxt build` skips the guard that the `build` script runs first, which would stop this build.
     const built = await sh('npx nuxt build', dir)
     expect(built.code, built.out.slice(-1500)).toBe(0)
     expect(await badgeOn(dir)).toBe(true)

@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
-    "build": "nuxt build",
-    "prebuild": "node scripts/check-licences.mjs",
+    "build": "node scripts/check-licences.mjs && nuxt build",
     "check:licences": "node scripts/check-licences.mjs"
   },
   "dependencies": {

@@ -29,7 +29,7 @@ To skip the questions, pass flags: see [Flags](#flags).
 - The theme in `app/theme.ts`. Light-mode primary colours use shade 700, which keeps white text above a 4.5:1 contrast ratio.
 - Inter or Geist, self-hosted from `public/fonts/` with their licence files. No calls to Google.
 - Three animations (`animate-fade-up`, `animate-shimmer`, `animate-pulse-soft`) that respect `prefers-reduced-motion`, one example directive and one custom Tailwind `@utility`.
-- `scripts/check-licences.mjs`, with no dependencies, run before every `npm run build` (and on its own as `npm run check:licences`).
+- `scripts/check-licences.mjs`, with no dependencies, run as the first step of the `build` script, so it runs with every package manager (and on its own as `npm run check:licences`).
 - A demo page that proves the setup. Delete `app/pages/index.vue` to start clean, or create with `--no-demo`.
 
 ## Fix an existing project: `doctor`
