@@ -1,7 +1,22 @@
 {
   "name": "create-nuxt-primevue",
   "version": "0.0.0",
-  "description": "Create Nuxt 4 + PrimeVue 4 + Tailwind 4 projects on free MIT versions.",
+  "description": "Create Nuxt 4 + PrimeVue 4 + Tailwind 4 projects on free MIT versions, with a licence check.",
+  "keywords": [
+    "nuxt",
+    "nuxt4",
+    "primevue",
+    "tailwindcss",
+    "tailwind4",
+    "starter",
+    "create",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kiri1101/create-nuxt-primevue.git"
+  },
+  "homepage": "https://github.com/kiri1101/create-nuxt-primevue#readme",
   "type": "module",
   "license": "MIT",
   "author": "Jordan Tukum Folem",
