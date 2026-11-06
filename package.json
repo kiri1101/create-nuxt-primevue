@@ -1,6 +1,6 @@
 {
   "name": "create-nuxt-primevue",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Create Nuxt 4 + PrimeVue 4 + Tailwind 4 projects on free MIT versions, with a licence check.",
   "keywords": [
     "nuxt",
