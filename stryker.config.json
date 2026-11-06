@@ -11,6 +11,10 @@
     "src/create/options.ts",
     "src/create/render.ts",
     "src/create/apply.ts",
+    "src/create/scaffold.ts",
+    "src/doctor/guard.ts",
+    "src/node-version.ts",
+    "src/package-json.ts",
     "src/pm.ts"
   ],
   "tsconfigFile": "tsconfig.stryker-unused.json",

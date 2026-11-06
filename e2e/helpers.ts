@@ -241,6 +241,8 @@ export async function checkDefaultCreate(): Promise<void> {
   expect(tracked.out).toContain('package.json')
 
   const log = await sh('git log --oneline', dir)
+  // A repository with no commit also prints one line (the error), so the exit code is part of the check.
+  expect(log.code, log.out).toBe(0)
   expect(log.out.trim().split(/\r?\n/)).toHaveLength(1)
 
   await ensureBuilt(dir)

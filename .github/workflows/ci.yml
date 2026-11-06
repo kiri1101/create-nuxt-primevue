@@ -2,11 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 permissions:
   contents: read
+
+# The first commit of a generated project needs an identity, and CI has none.
+env:
+  GIT_AUTHOR_NAME: ci
+  GIT_AUTHOR_EMAIL: ci@example.com
+  GIT_COMMITTER_NAME: ci
+  GIT_COMMITTER_EMAIL: ci@example.com
 
 jobs:
   unit:
@@ -29,15 +35,15 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      # pnpm and yarn (Berry) come from corepack, bun from its own action. The package-manager
-      # cases skip a manager that is not installed, so these steps are what make them run.
+      # pnpm and yarn (Berry) come from corepack, bun from its own action. With E2E_FULL and CI set, a
+      # manager that is not installed fails its case instead of skipping it.
       - run: |
           corepack enable
           corepack prepare pnpm@latest --activate

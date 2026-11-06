@@ -95,10 +95,14 @@ describe('ensureEmptyTarget', () => {
     mkdirSync(join(root, 'empty'))
     expect(ensureEmptyTarget(join(root, 'empty'))).toBeNull()
   })
+  it('refuses a path that is a file, naming it', () => {
+    writeFileSync(join(root, 'afile'), 'x')
+    expect(ensureEmptyTarget(join(root, 'afile'))).toBe(`${join(root, 'afile')} already exists and is not a folder.`)
+  })
   it('refuses a folder with a file and leaves it', () => {
     mkdirSync(join(root, 'full'))
     writeFileSync(join(root, 'full', 'a.txt'), 'keep')
-    expect(ensureEmptyTarget(join(root, 'full'))).toEqual(expect.any(String))
+    expect(ensureEmptyTarget(join(root, 'full'))).toBe(`${join(root, 'full')} already exists and is not empty. Pick another name or empty it first.`)
     expect(readFileSync(join(root, 'full', 'a.txt'), 'utf8')).toBe('keep')
   })
 })
