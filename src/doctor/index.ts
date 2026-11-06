@@ -48,7 +48,7 @@ async function offerGuard(dir: string, fixedWith: PackageManager | null): Promis
   mkdirSync(join(dir, 'scripts'), { recursive: true })
   copyFileSync(GUARD_SOURCE, join(dir, GUARD_FILE))
   writeFileSync(file, edit.text)
-  log('✓ Licence guard added. ' + GUARD_UNDO)
+  log('✓ Licence guard added. ' + guardUndo(fixedWith))
 }
 
 /** Returns the process exit code: 0 fine, 1 a problem remains, 2 the project could not be scanned. */
