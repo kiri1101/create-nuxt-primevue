@@ -74,6 +74,7 @@ describe.skipIf(!FULL)('create, one run per package manager', () => {
           result = await generateWith(pm, version as string, join(workRoot(), `pm-${pm}-${i}`), `app-${pm}`)
         } catch (e) {
           console.warn(`[e2e] ${pm} attempt ${i}/3 failed: ${String(e).slice(0, 400)}`)
+          removeDir(join(workRoot(), `pm-${pm}-${i}`))
           if (i === 3) throw e
         }
       }

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { BaseSequencer, type TestSpecification } from 'vitest/node'
 
 // The checks share one project in a fixed order: create, badge (false, guard, v5, true), doctor, then the
@@ -16,6 +16,8 @@ class ChainSequencer extends BaseSequencer {
 export default defineConfig({
   test: {
     include: ['e2e/**/*.e2e.ts'],
+    // windows.e2e.ts repeats the default create case for the Windows CI job, which sets E2E_WINDOWS.
+    exclude: process.env.E2E_WINDOWS ? configDefaults.exclude : [...configDefaults.exclude, 'e2e/windows.e2e.ts'],
     globalSetup: ['e2e/global-setup.ts'],
     fileParallelism: false,
     maxWorkers: 1,

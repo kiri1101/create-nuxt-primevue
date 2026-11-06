@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync }
 import { createServer } from 'node:net'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { inject } from 'vitest'
+import { expect, inject } from 'vitest'
 
 // Builds and installs run strictly one at a time and with a capped heap: the machine has little spare memory.
 process.env.NODE_OPTIONS ??= '--max-old-space-size=2048'
@@ -83,6 +83,7 @@ export async function generateWithRetry(dir: string, name: string, flags: string
       return await generate(join(dir, `try${i}`), name, flags)
     } catch (e) {
       console.warn(`[e2e] generate attempt ${i}/${tries} failed for ${name}`)
+      removeDir(join(dir, `try${i}`))
       error = e
     }
   }
@@ -186,6 +187,10 @@ function freePort(): Promise<number> {
  *  - the `[PrimeUI]` console message, and
  *  - the badge's host element, `div#p-license-host` (fixed, z-index 2147483647). The badge sits in a closed shadow root, so its
  *    contents cannot be read; the host element in the light DOM is what can be found.
+ *
+ * Finding the badge returns true at once. "No badge" only counts once the app is proven alive: the heading is
+ * visible, the dark-mode button works (only after hydration), and no page or console errors were seen.
+ * Otherwise this throws, so a page that failed to render can never pass as "no badge".
  */
 export async function licenceBadgeShown(url: string): Promise<boolean> {
   const { chromium } = await import('playwright')
@@ -193,9 +198,13 @@ export async function licenceBadgeShown(url: string): Promise<boolean> {
   try {
     const page = await browser.newPage()
     let consoleMessage = false
+    const errors: string[] = []
     page.on('console', (m) => {
-      if (m.text().includes('[PrimeUI]')) consoleMessage = true
+      const text = m.text()
+      if (text.includes('[PrimeUI]')) consoleMessage = true
+      else if (m.type() === 'error') errors.push(`console.error: ${text}`)
     })
+    page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
     await page.goto(url, { waitUntil: 'networkidle' })
     // PrimeVue checks the licence when it starts on the client, right after hydration. Give it a few
     // seconds after the network goes quiet before saying "not shown".
@@ -203,10 +212,38 @@ export async function licenceBadgeShown(url: string): Promise<boolean> {
       .waitForSelector('#p-license-host', { state: 'attached', timeout: 6_000 })
       .then(() => true)
       .catch(() => false)
-    return host || consoleMessage
+    if (host || consoleMessage) return true
+
+    try {
+      await page.getByRole('heading', { name: "Everything's wired up." }).waitFor({ state: 'visible', timeout: 5_000 })
+      await page.getByRole('button', { name: 'Dark mode' }).click({ timeout: 5_000 })
+      await page.waitForFunction(() => document.documentElement.classList.contains('dark'), undefined, { timeout: 5_000 })
+    } catch (e) {
+      throw new Error(`no licence badge, but the page is not proven alive (not rendered or not hydrated): ${String(e).slice(0, 600)} ${errors.join(' | ')}`)
+    }
+    if (errors.length) throw new Error(`no licence badge, but the page raised errors: ${errors.join(' | ')}`)
+    return false
   } finally {
     await browser.close()
   }
+}
+
+/** The default create case: .gitignore written, one commit, no node_modules in git, and a passing build. */
+export async function checkDefaultCreate(): Promise<void> {
+  const dir = await mainProject()
+  expect(existsSync(join(dir, 'package.json'))).toBe(true)
+  // npm drops .gitignore from published tarballs, so the CLI must write it itself.
+  expect(existsSync(join(dir, '.gitignore'))).toBe(true)
+
+  const tracked = await sh('git ls-files', dir)
+  expect(tracked.code).toBe(0)
+  expect(tracked.out).not.toContain('node_modules')
+  expect(tracked.out).toContain('package.json')
+
+  const log = await sh('git log --oneline', dir)
+  expect(log.out.trim().split(/\r?\n/)).toHaveLength(1)
+
+  await ensureBuilt(dir)
 }
 
 export function lockfileFor(dir: string): string[] {

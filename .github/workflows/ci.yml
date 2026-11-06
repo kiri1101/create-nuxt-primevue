@@ -60,7 +60,10 @@ jobs:
           cache: npm
       - run: npm ci
       # Windows path handling and the .gitignore workaround matter most here: only the default case runs.
-      - run: npx vitest run --config vitest.e2e.config.ts e2e/create.e2e.ts -t "default:"
+      # Run by file path: a missing file fails the job, where a name filter could silently select nothing.
+      - run: npx vitest run --config vitest.e2e.config.ts e2e/windows.e2e.ts
+        env:
+          E2E_WINDOWS: "1"
 
   # Unit tests only (about 2.5 minutes), so it runs in full: no incremental cache. The break threshold in
   # stryker.config.json fails the job when the score drops.
