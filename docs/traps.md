@@ -39,7 +39,7 @@ Only the newest versions are affected. Older releases stay MIT on the registry a
 
 `tailwindcss`, `@tailwindcss/vite`, `tailwindcss-primeui` and `nuxt` are MIT and are not affected.
 
-`@primeuix/themes` 2.0.3 works with `primevue` 4.5.5. The template this CLI generates uses exactly that pair. `@primevue/themes`, the older theme package name, is deprecated: use `@primeuix/themes`. Do not read "avoid `@primeuix` on 4.x" into any older advice. The packages under that scope are not all commercial, only the newest versions are.
+`@primeuix/themes` 2.0.3 works with `primevue` 4.5.5. The template this CLI generates uses exactly that pair. `@primevue/themes`, the older theme package name, is deprecated: use `@primeuix/themes`. The packages under the `@primeuix` scope are not all commercial: only the newest versions are.
 
 ### How to check what you have
 
@@ -59,7 +59,7 @@ Exact pins mean `npm update` alone does not bring in a non-MIT Prime package. Th
 - a hand-edited version in `package.json`;
 - another dependency that pulls in a v5 package.
 
-A tutorial written for v5 is the usual way the first two happen, because the theme package name and import paths differ between lines.
+A tutorial written for v5 is a common way the first two happen, because the theme package name and import paths differ between lines.
 
 ### Going back to v4
 
@@ -83,9 +83,9 @@ Going back can break code that uses features only present in v5.
 - Your organisation already buys software with support, and a licence key is a small cost.
 - You do not qualify for the free Community tier.
 
-When this guide was written, the Community licence was described as free for organisations with fewer than 5 developers, fewer than 10 employees and under $1M in revenue, and as excluding public-sector organisations. The last condition matters if you build for a government body or a public university. Check PrimeTek's current terms rather than relying on this summary: they can change, and this guide may be out of date.
+When this guide was written, the Community licence was described as free for organisations with fewer than 5 developers, fewer than 10 employees and under $1M in revenue, and as excluding public-sector organisations. The last condition matters if you build for a government body or a public university. Check PrimeTek's current terms (https://primeui.dev/licenses) rather than relying on this summary: they can change, and this guide may be out of date.
 
-If you do hold a key, `doctor` asks about it and leaves your packages alone.
+If you do hold a key, `doctor` asks about it and leaves your packages alone (unless you pass `--yes-fix`, which skips the question and applies the fix).
 
 ---
 
@@ -104,10 +104,11 @@ With only the plugin, nothing imports the stylesheet, so Tailwind emits nothing.
 
 **Fix:** set both. The stylesheet starts with `@import "tailwindcss";`.
 
-**Check:** after `npm run build`, one of the compiled CSS files should carry Tailwind's version comment.
+**Check:** after `npm run build`, a compiled CSS file usually carries Tailwind's version comment. If none does, search for a utility class you used instead.
 
 ```bash
-grep -l 'tailwindcss v4' .output/public/_nuxt/*.css   # should list at least one file
+grep -l 'tailwindcss v4' .output/public/_nuxt/*.css   # usually lists a file
+grep -l 'some-utility-you-used' .output/public/_nuxt/*.css
 ```
 
 ## 2. PrimeVue is installed but components do not render
@@ -160,8 +161,9 @@ PORT=3123 node .output/server/index.mjs     # in a second terminal
 curl -s http://localhost:3123/ > page.html
 grep -c 'p-button' page.html            # more than 0: components rendered
 grep -c '@layer primevue' page.html     # more than 0: the layer setting is active
-grep -c 'p-license-host' page.html      # 0 is expected: no licence badge
 ```
+
+This does not prove the licence is fine. The badge is added in the browser inside a closed shadow root, so a text search of the server HTML finds nothing even on v5. To check licences, run `npx create-nuxt-primevue doctor --check`. For a visual check, open the page in a browser and look for the badge, or for the `[PrimeUI]` message in the console.
 
 This generalises: in this stack most breakage is invisible at build time. Prefer a running page over a passing build when you are proving something works. Stop the server when you are done.
 
@@ -189,7 +191,7 @@ done
 
 ## 6. npm warns about unapproved install scripts for esbuild
 
-**Symptom:** on every install, npm warns that `esbuild` has an unapproved `postinstall` script and suggests approving it (for example `npm install-scripts approve <pkg>`; the command name depends on your npm version).
+**Symptom:** on every install, npm warns that `esbuild` has an unapproved `postinstall` script and suggests approving it. The wording and the command depend on your npm version; recent versions say to run `npm install-scripts approve <pkg>`, and older notes call it `npm approve-scripts`.
 
 **Usually you do not need to approve it.** esbuild ships its binary as an optional dependency (`@esbuild/<platform>`), which installs without running a script. Its install script is only a fallback for platforms where that binary does not exist.
 
@@ -217,7 +219,7 @@ There are two cases.
 - PrimeVue `darkModeSelector: '.dark'`;
 - Tailwind `@custom-variant dark (&:where(.dark, .dark *));`.
 
-**If your project is light only.** Symptom: the page stays light, but form fields, dropdown lists and scrollbars turn dark and the page looks broken. Cause: deleting your own dark styles does not stop the browser, and PrimeVue's default system-preference behaviour, from switching things. Fix: disable it at both levels.
+**If your project is light only.** Symptom: the page stays light, but form fields, dropdown lists and scrollbars turn dark and the page looks broken. Cause: when the user's system is set to dark, the browser switches its native controls to dark and PrimeVue switches its components to dark too, whether or not you wrote any dark styles. Deleting your own dark styles changes neither. Fix: disable it at both levels.
 
 ```ts
 // PrimeVue options
