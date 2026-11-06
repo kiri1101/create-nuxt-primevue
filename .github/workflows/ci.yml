@@ -65,6 +65,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx playwright install chromium
       # Windows path handling and the .gitignore workaround matter most here: only the default case runs.
       # Run by file path: a missing file fails the job, where a name filter could silently select nothing.
       - run: npx vitest run --config vitest.e2e.config.ts e2e/windows.e2e.ts
