@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyChanges, planFix } from '../src/doctor/plan.ts'
+import { applyChanges, indirectLines, planFix, undoAdvice } from '../src/doctor/plan.ts'
 
 const off = (name: string, version: string) => ({ name, version, license: 'Commercial', dir: `/p/node_modules/${name}` })
 const dep = (extra: object = {}) => ({ dependencies: { primevue: '^5.0.4' }, ...extra })
@@ -39,11 +39,47 @@ describe('planFix: overrides that block an automatic fix', () => {
 })
 
 describe('planFix: an offender that is not a direct dependency', () => {
-  it('says so, even when a pin exists for that package', () => {
+  it('is indirect, even when a pin exists for that package', () => {
     const r = planFix({ dependencies: { vue: '^3.5.0' } }, primevue)
     expect(r.changes).toEqual([])
-    expect(r.manual).toHaveLength(1)
-    expect(r.manual[0]).toContain('primevue@5.0.4 is not a direct dependency')
+    expect(r.manual).toEqual([])
+    expect(r.indirect).toEqual(primevue)
+  })
+  it('keeps the direct ones in changes and the rest in indirect', () => {
+    const r = planFix(dep(), [...primevue, off('@primeuix/styled', '2.0.0'), off('@primevue/core', '5.0.4')])
+    expect(r.changes).toHaveLength(1)
+    expect(r.indirect.map((o) => o.name)).toEqual(['@primeuix/styled', '@primevue/core'])
+  })
+})
+
+describe('indirectLines: what doctor prints for packages that are not direct dependencies', () => {
+  const a = off('@primeuix/styled', '2.0.0')
+  const b = off('@primevue/core', '5.0.4')
+  it('prints nothing when there are none', () => {
+    expect(indirectLines([], true)).toEqual([])
+    expect(indirectLines([], false)).toEqual([])
+  })
+  // Hand-written: one note naming each package, because the fix is going to clear them.
+  it('prints one note when the fix has changes, naming each package', () => {
+    expect(indirectLines([a, b], true)).toEqual([
+      'These also come in through the packages above, so they should be gone after the install (the check afterwards confirms it): @primeuix/styled@2.0.0, @primevue/core@5.0.4.',
+    ])
+  })
+  it('prints one manual step for each when there is no automatic fix', () => {
+    const lines = indirectLines([a, b], false)
+    expect(lines).toHaveLength(2)
+    expect(lines[0]).toContain('@primeuix/styled@2.0.0 is not a direct dependency')
+    expect(lines[0]).toContain('npm ls @primeuix/styled')
+    expect(lines[1]).toContain('@primevue/core@5.0.4 is not a direct dependency')
+  })
+})
+
+describe('undoAdvice: git does not track node_modules', () => {
+  it('says to check out and then reinstall with the detected manager', () => {
+    expect(undoAdvice({ name: 'pnpm', major: null })).toBe(
+      'To undo the change, run "git checkout ." and then "pnpm install": git does not track node_modules, so it still holds the new versions until you reinstall.',
+    )
+    expect(undoAdvice({ name: 'yarn', major: 4 })).toContain('"yarn install"')
   })
 })
 

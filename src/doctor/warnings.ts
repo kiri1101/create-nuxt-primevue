@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { readPackageJson } from '../package-json.ts'
 import { join } from 'node:path'
 
 export const GUIDE = 'https://github.com/kiri1101/create-nuxt-primevue/blob/main/docs/traps.md'
@@ -18,12 +19,8 @@ function readIf(file: string): string | null {
 /** Setup problems that are not licence problems. Read-only. */
 export function setupWarnings(dir: string): string[] {
   const warnings: string[] = []
-  let pkg: { dependencies?: object; devDependencies?: object }
-  try {
-    pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
-  } catch {
-    return warnings
-  }
+  const pkg = readPackageJson(dir) as { dependencies?: object; devDependencies?: object } | null
+  if (pkg === null) return warnings
   const deps = { ...pkg.dependencies, ...pkg.devDependencies } as Record<string, string>
   const has = (name: string) => name in deps
   const tailwind = has('tailwindcss') || has('@tailwindcss/vite')

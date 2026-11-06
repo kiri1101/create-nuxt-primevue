@@ -2,6 +2,9 @@
   "name": "my-app",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
+  },
   "scripts": {
     "dev": "nuxt dev",
     "build": "node scripts/check-licences.mjs && nuxt build",
@@ -16,7 +19,7 @@
     "primeicons": "7.0.0",
     "primevue": "4.5.5",
     "tailwindcss": "^4.3.0",
-    "tailwindcss-primeui": "^0.6.0",
+    "tailwindcss-primeui": "0.6.1",
     "vue": "^3.5.0"
   }
 }

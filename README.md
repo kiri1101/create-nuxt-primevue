@@ -17,7 +17,13 @@ Why it exists: `npm install primevue` now installs version 5, which is no longer
 npm create nuxt-primevue@latest my-app
 ```
 
-This is the same as `npx create-nuxt-primevue my-app`. It asks for the project name if you did not give one, then for the theme, primary colour, font and whether to keep the demo page. It copies the template, installs with the package manager you ran it with (npm, pnpm, Yarn or Bun), runs the licence check, and makes one git commit (unless you pass `--no-git`, or the folder is already inside a repository). Needs Node 22 or later.
+This is the same as `npx create-nuxt-primevue my-app`. It asks for the project name if you did not give one, then for the theme, primary colour, font and whether to keep the demo page. It copies the template, installs with the package manager you ran it with (npm, pnpm, Yarn or Bun), runs the licence check, and makes one git commit (unless you pass `--no-git`, or the folder is already inside a repository). Needs a Node version that Nuxt supports (today `^22.22.3 || ^24.15.0 || >=26.0.0`); the CLI checks this when it starts.
+
+Without a terminal (a script or CI) it cannot ask its questions, so it needs `--yes`. npm keeps a bare `--yes` for itself, so put the flags after `--`:
+
+```bash
+npm create nuxt-primevue@latest my-app -- --yes
+```
 
 To skip the questions, pass flags: see [Flags](#flags).
 
@@ -42,7 +48,7 @@ npx create-nuxt-primevue doctor
 
 It scans every installed Prime package (`primevue`, `primeicons`, `@primevue/*`, `@primeuix/*`, including nested copies) and reports any whose licence is not exactly `MIT`. It also warns about setup problems, such as a missing CSS layer order or the deprecated `@primevue/themes`.
 
-If it finds non-MIT packages, it asks whether you have a PrimeUI licence key. If you do, it leaves everything alone. If you do not, it proposes moving the direct pins back to the last MIT versions, shows the change, and asks before writing. It only changes a project that is a git repository with a clean working tree, and it never commits. `git checkout .` undoes it.
+If it finds non-MIT packages, it asks whether you have a PrimeUI licence key. If you do, it leaves everything alone. If you do not, it proposes moving the direct pins back to the last MIT versions, shows the change, and asks before writing. It only changes a project that is a git repository with a clean working tree, and it never commits. To undo it, run `git checkout .` and then reinstall with your package manager (for example `npm install`): git does not track `node_modules`, which would otherwise still hold the new versions. If you also added the guard, delete `scripts/check-licences.mjs`.
 
 | Option | Effect |
 |---|---|

@@ -25,13 +25,15 @@
   },
   "files": [
     "dist",
-    "template"
+    "template",
+    "!template/package-lock.json"
   ],
   "engines": {
-    "node": ">=22"
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
+    "prepack": "npm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",

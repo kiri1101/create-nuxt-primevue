@@ -2,7 +2,7 @@
 
 Most failures in this stack raise no error. The build passes, the console is empty, and all you have is "it doesn't work". This guide lists the licence change that catches most people first, then twelve other problems, each as symptom, cause and fix. The exact error text is in the heading or the first line, so you can paste it into a search engine.
 
-The versions this guide was checked against: Nuxt 4.x, Vue 3.5, PrimeVue 4.5.5, Tailwind CSS 4.3, Node 22 and later. If your versions differ a lot, check the official documentation: it is more current than this file.
+The versions this guide was checked against: Nuxt 4.x, Vue 3.5, PrimeVue 4.5.5, Tailwind CSS 4.3, the Node versions Nuxt supports (today `^22.22.3 || ^24.15.0 || >=26.0.0`). If your versions differ a lot, check the official documentation: it is more current than this file.
 
 Contents
 

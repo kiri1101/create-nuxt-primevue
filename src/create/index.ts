@@ -5,7 +5,7 @@ import { detectPackageManager, installArgs, scriptArgs } from '../pm.ts'
 import { run } from '../run.ts'
 import { applyAnswers } from './apply.ts'
 import { initRepo } from './git.ts'
-import { type Answers, DEFAULTS, parseCreateArgs, validateProjectName } from './options.ts'
+import { type Answers, DEFAULTS, decideYes, parseCreateArgs, validateProjectName } from './options.ts'
 import { askMissing } from './prompts.ts'
 import { copyTemplate, ensureEmptyTarget } from './scaffold.ts'
 
@@ -14,9 +14,14 @@ const TEMPLATE_DIR = fileURLToPath(new URL('../../template', import.meta.url))
 
 /** Returns the process exit code. */
 export async function create(argv: string[]): Promise<number> {
-  const { answers: given, yes, errors } = parseCreateArgs(argv)
+  const { answers: given, yes: yesFlag, errors } = parseCreateArgs(argv)
   if (errors.length > 0) {
     for (const e of errors) console.error(e)
+    return 1
+  }
+  const { yes, problem: promptProblem } = decideYes(yesFlag, process.stdin.isTTY, process.env.npm_config_yes)
+  if (promptProblem) {
+    console.error(promptProblem)
     return 1
   }
 

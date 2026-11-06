@@ -59,3 +59,38 @@ describe('projectPackageManager: the lockfile says which manager a project uses'
     expect(projectPackageManager(member(), 'bun/1.1.0')).toEqual({ name: 'bun', major: 1 })
   })
 })
+
+describe('projectPackageManager: the packageManager field comes before any lockfile', () => {
+  let root: string
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'pm-field-'))
+  })
+  afterEach(() => rmSync(root, { recursive: true, force: true }))
+  const pkg = (dir: string, data: object) => {
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'package.json'), JSON.stringify(data))
+  }
+
+  // A stale yarn.lock beside a current package-lock.json must not win over what the project declares.
+  it('reads name and major from the field, over a stale lockfile', () => {
+    pkg(root, { packageManager: 'pnpm@9.1.0+sha512.abc' })
+    writeFileSync(join(root, 'yarn.lock'), '')
+    expect(projectPackageManager(root, undefined)).toEqual({ name: 'pnpm', major: 9 })
+  })
+  it('reads the field from the workspace root for a member', () => {
+    pkg(root, { packageManager: 'yarn@4.5.0', workspaces: ['apps/*'] })
+    pkg(join(root, 'apps/web'), { name: 'web' })
+    expect(projectPackageManager(join(root, 'apps/web'), 'npm/10.0.0')).toEqual({ name: 'yarn', major: 4 })
+  })
+  it.each(['deno@1.0.0', 'pnpm', 'pnpm@latest', '', 5])('ignores the unusable value %j and falls back to the lockfile', (value) => {
+    pkg(root, { packageManager: value })
+    writeFileSync(join(root, 'bun.lock'), '')
+    expect(projectPackageManager(root, undefined)).toEqual({ name: 'bun', major: null })
+  })
+  it('does not read a package.json that is broken', () => {
+    mkdirSync(root, { recursive: true })
+    writeFileSync(join(root, 'package.json'), '{ nope')
+    writeFileSync(join(root, 'yarn.lock'), '')
+    expect(projectPackageManager(root, undefined).name).toBe('yarn')
+  })
+})

@@ -1,4 +1,5 @@
 import type { Installed } from '../../template/scripts/check-licences.mjs'
+import type { PackageManager } from '../pm.ts'
 
 /** The last MIT versions. `@primevue/*` means every package in that scope. */
 export const PINS = {
@@ -28,13 +29,17 @@ function mentionsPrime(value: unknown): boolean {
   })
 }
 
-/** Decides which direct pins can be rewritten safely. Anything else becomes manual steps. */
-export function planFix(pkg: object, offenders: Installed[]): { changes: Change[]; manual: string[] } {
+/**
+ * Decides which direct pins can be rewritten safely. Anything else direct becomes manual steps. Offenders that
+ * are not direct dependencies come in through the direct ones, so they are listed apart as `indirect`.
+ */
+export function planFix(pkg: object, offenders: Installed[]): { changes: Change[]; manual: string[]; indirect: Installed[] } {
   const p = pkg as Record<string, Record<string, unknown> | undefined>
   const overrides = [p.overrides, p.resolutions, (p.pnpm as Record<string, unknown> | undefined)?.overrides]
   if (overrides.some(mentionsPrime)) {
     return {
       changes: [],
+      indirect: [],
       manual: [
         'Your package.json has "overrides" or "resolutions" that mention a Prime package. They decide which versions install, so they must be edited by hand: remove or change those entries, then reinstall.',
       ],
@@ -43,6 +48,7 @@ export function planFix(pkg: object, offenders: Installed[]): { changes: Change[
 
   const changes: Change[] = []
   const manual: string[] = []
+  const indirect: Installed[] = []
   const seen = new Set<string>()
   for (const offender of offenders) {
     if (seen.has(offender.name)) continue
@@ -51,7 +57,7 @@ export function planFix(pkg: object, offenders: Installed[]): { changes: Change[
     const sections = SECTIONS.filter((s) => typeof p[s]?.[offender.name] === 'string')
     const to = pinFor(offender.name)
     if (sections.length === 0) {
-      manual.push(`${offender.name}@${offender.version} is not a direct dependency. Another package brings it in; find which one (for example with "npm ls ${offender.name}") and move that package to a version that uses the free v4 line.`)
+      indirect.push(offender)
     } else if (to === undefined) {
       manual.push(`${offender.name}@${offender.version} is a direct dependency with no automatic fix. Replace it by hand, or remove it if you do not need it.`)
     } else {
@@ -65,7 +71,24 @@ export function planFix(pkg: object, offenders: Installed[]): { changes: Change[
       }
     }
   }
-  return { changes, manual }
+  return { changes, manual, indirect }
+}
+
+export function indirectStep(o: Installed): string {
+  return `${o.name}@${o.version} is not a direct dependency. Another package brings it in; find which one (for example with "npm ls ${o.name}") and move that package to a version that uses the free v4 line.`
+}
+
+/** What doctor prints for offenders that are not direct dependencies. */
+export function indirectLines(indirect: Installed[], hasChanges: boolean): string[] {
+  if (indirect.length === 0) return []
+  if (!hasChanges) return indirect.map(indirectStep)
+  const names = indirect.map((o) => `${o.name}@${o.version}`).join(', ')
+  return [`These also come in through the packages above, so they should be gone after the install (the check afterwards confirms it): ${names}.`]
+}
+
+/** git does not track node_modules, so checking out package.json and the lockfile alone leaves the new versions installed. */
+export function undoAdvice(pm: PackageManager): string {
+  return `To undo the change, run "git checkout ." and then "${pm.name} install": git does not track node_modules, so it still holds the new versions until you reinstall.`
 }
 
 // A minimal JSON scanner, so a version can be replaced in place without re-serialising the file.

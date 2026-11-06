@@ -15,3 +15,15 @@ describe('gitGate', () => {
     expect(gitGate(true, '', true)).toBeNull()
   })
 })
+
+describe('gitGate: git is not installed', () => {
+  // Without git, "run git init" would be useless advice.
+  it('says git is missing, not that the folder is not a repository', () => {
+    const message = gitGate(false, '', false, true)
+    expect(message).toContain('git is not installed')
+    expect(message).not.toContain('git init')
+  })
+  it('still says "not a git repository" when git is there', () => {
+    expect(gitGate(false, '', false, false)).toContain('not a git repository')
+  })
+})

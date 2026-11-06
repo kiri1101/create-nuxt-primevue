@@ -2,20 +2,22 @@ import * as p from '@clack/prompts'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkProject, declaredPrimePackages } from '../../template/scripts/check-licences.mjs'
+import { checkProject } from '../../template/scripts/check-licences.mjs'
 import { installArgs, projectPackageManager, scriptArgs } from '../pm.ts'
 import { capture, run } from '../run.ts'
 import { gitGate } from './gate.ts'
 import { GUARD_COMMAND, GUARD_FILE, addGuard, guardProblem } from './guard.ts'
-import { applyChanges, planFix } from './plan.ts'
+import { applyChanges, indirectLines, planFix, undoAdvice } from './plan.ts'
+import { parsePackageJson } from '../package-json.ts'
 import { setupWarnings } from './warnings.ts'
 
 // From src/doctor or dist/doctor, two levels up is the package root, where `template/` ships.
 const GUARD_SOURCE = fileURLToPath(new URL('../../template/scripts/check-licences.mjs', import.meta.url))
-const UNDO = 'To undo the change, run: git checkout .'
+const GUARD_UNDO = 'To remove the guard again, run "git checkout package.json" and delete scripts/check-licences.mjs.'
 
 const log = (line = '') => console.log(line)
 
+/** True only for a yes. A cancel (Ctrl-C) is reported separately by `askLicenceKey`. */
 async function confirm(message: string): Promise<boolean> {
   const answer = await p.confirm({ message, initialValue: false })
   return answer === true
@@ -27,7 +29,7 @@ async function gateProblem(dir: string): Promise<string | null> {
   const status = isRepo ? await capture('git', ['status', '--porcelain'], dir) : { code: 0, stdout: '' }
   const tracked = isRepo && (await capture('git', ['ls-files', '--error-unmatch', 'package.json'], dir)).code === 0
   // If git status itself fails we cannot prove the tree is clean, so treat it as not clean.
-  return gitGate(isRepo, status.code === 0 ? status.stdout : 'unknown', tracked)
+  return gitGate(isRepo, status.code === 0 ? status.stdout : 'unknown', tracked, inside.code === 127)
 }
 
 async function offerGuard(dir: string): Promise<void> {
@@ -46,7 +48,7 @@ async function offerGuard(dir: string): Promise<void> {
   mkdirSync(join(dir, 'scripts'), { recursive: true })
   copyFileSync(GUARD_SOURCE, join(dir, GUARD_FILE))
   writeFileSync(file, edit.text)
-  log('✓ Licence guard added.')
+  log('✓ Licence guard added. ' + GUARD_UNDO)
 }
 
 /** Returns the process exit code: 0 fine, 1 a problem remains, 2 the project could not be scanned. */
@@ -66,7 +68,7 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
   }
   let pkg: object
   try {
-    pkg = JSON.parse(readFileSync(pkgFile, 'utf8'))
+    pkg = parsePackageJson(readFileSync(pkgFile, 'utf8')) as object
   } catch {
     console.error('package.json is not valid JSON.')
     return 2
@@ -105,6 +107,7 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
     if (check || !process.stdin.isTTY) return 0
     const problem = await gateProblem(cwd)
     if (problem === null) await offerGuard(cwd)
+    else log(`- The licence guard was not offered: ${problem}`)
     return 0
   }
 
@@ -119,15 +122,23 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
     return 1
   }
 
-  if (!yesFix && (await confirm('Do you have a PrimeUI licence key?'))) {
-    log('Nothing to fix: your licence covers these packages.')
-    return 0
+  if (!yesFix) {
+    const answer = await p.confirm({ message: 'Do you have a PrimeUI licence key?', initialValue: false })
+    if (p.isCancel(answer)) {
+      log('Cancelled. Nothing was changed.')
+      return 1
+    }
+    if (answer) {
+      log('Nothing to fix: your licence covers these packages.')
+      return 0
+    }
   }
 
-  const { changes, manual } = planFix(pkg, result.offenders)
-  if (manual.length > 0) {
+  const { changes, manual, indirect } = planFix(pkg, result.offenders)
+  const steps = changes.length === 0 ? [...manual, ...indirectLines(indirect, false)] : manual
+  if (steps.length > 0) {
     log('\nThese need manual steps:')
-    for (const m of manual) log(`  - ${m}`)
+    for (const m of steps) log(`  - ${m}`)
   }
   if (changes.length === 0) {
     log('\ndoctor has no automatic fix for this project.')
@@ -136,6 +147,7 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
   log('\nProposed fix:')
   for (const c of changes) log(`  ${c.name.padEnd(24)} ${c.from} → ${c.to}   (${c.section})`)
   log('\n⚠ Going back to v4 can break code that uses v5-only features.')
+  for (const line of indirectLines(indirect, true)) log(line)
 
   const problem = await gateProblem(cwd)
   if (problem) {
@@ -147,20 +159,21 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
     return 1
   }
 
+  const pm = projectPackageManager(cwd, process.env.npm_config_user_agent)
+  const undo = undoAdvice(pm)
   writeFileSync(pkgFile, applyChanges(readFileSync(pkgFile, 'utf8'), changes))
   log('✓ Pins updated in package.json')
 
-  const pm = projectPackageManager(cwd, process.env.npm_config_user_agent)
   if ((await run(pm.name, installArgs(pm), cwd)) !== 0) {
-    console.error(`✗ Install failed. ${UNDO}`)
+    console.error(`✗ Install failed. ${undo}`)
     return 1
   }
   log('✓ Installed')
 
-  const scripts = (JSON.parse(readFileSync(pkgFile, 'utf8')) as { scripts?: Record<string, string> }).scripts ?? {}
+  const scripts = (parsePackageJson(readFileSync(pkgFile, 'utf8')) as { scripts?: Record<string, string> }).scripts ?? {}
   if (scripts.build !== undefined) {
     if ((await run(pm.name, scriptArgs(pm, 'build'), cwd)) !== 0) {
-      console.error(`✗ The build failed after the change. Code written for v5 may not build on v4. ${UNDO}`)
+      console.error(`✗ The build failed after the change. Code written for v5 may not build on v4. ${undo}`)
       return 1
     }
     log('✓ Build passes')
@@ -173,13 +186,15 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
     console.error('✗ The licence check still fails:')
     for (const o of after.offenders) console.error(`    ${o.name} ${o.version}  licence: ${JSON.stringify(o.license)}`)
     if (after.status === 'nothing-installed') console.error('    Nothing could be verified: no Prime packages are installed.')
+    const stillIndirect = indirect.filter((i) => after.offenders.some((o) => o.name === i.name))
+    for (const line of indirectLines(stillIndirect, false)) console.error(`    ${line}`)
     for (const name of after.missing) console.error(`    ${name} is declared but was not found installed.`)
-    console.error(UNDO)
+    console.error(undo)
     return 1
   }
   log('✓ Licence check passes')
-  log('Nothing was committed. Review the change with "git diff". ' + UNDO)
+  log('Nothing was committed. Review the change with "git diff". ' + undo)
 
-  if (!yesFix && declaredPrimePackages(pkg).length > 0) await offerGuard(cwd)
+  if (!yesFix) await offerGuard(cwd)
   return 0
 }

@@ -31,11 +31,13 @@ describe('planFix', () => {
     expect(r.changes).toEqual([{ section: 'dependencies', name: '@primevue/nuxt-module', from: '^5.0.0', to: '4.5.5' }])
   })
 
-  it('gives manual steps for an offender that is not a direct dependency', () => {
-    const r = planFix({ dependencies: { vue: '^3.5.0' } }, [off('@primeuix/styled', '2.0.0')])
+  // A real v5 tree brings in nine more non-MIT packages through the four direct ones. They are listed
+  // apart from the manual steps, because the automatic fix clears them.
+  it('lists an offender that is not a direct dependency as indirect, once, and not as a manual step', () => {
+    const r = planFix({ dependencies: { vue: '^3.5.0' } }, [off('@primeuix/styled', '2.0.0'), off('@primeuix/styled', '2.0.0')])
     expect(r.changes).toEqual([])
-    expect(r.manual).toHaveLength(1)
-    expect(r.manual[0]).toContain('@primeuix/styled')
+    expect(r.manual).toEqual([])
+    expect(r.indirect.map((o) => o.name)).toEqual(['@primeuix/styled'])
   })
 
   it.each(['overrides', 'resolutions'])('changes nothing when %s mention primevue', (key) => {

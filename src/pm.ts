@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { workspaceRoot } from '../template/scripts/check-licences.mjs'
+import { readPackageJson } from './package-json.ts'
 export type PackageManager = { name: 'npm' | 'pnpm' | 'yarn' | 'bun'; major: number | null }
 
 const NAMES = ['npm', 'pnpm', 'yarn', 'bun'] as const
@@ -33,13 +34,25 @@ const LOCKFILES: [string, PackageManager['name']][] = [
   ['package-lock.json', 'npm'],
 ]
 
+/** `pnpm@9.1.0+sha512...` (the field corepack reads) as a package manager, or undefined when it is not one of the four. */
+function fromPackageManagerField(value: unknown): PackageManager | undefined {
+  const match = typeof value === 'string' ? /^(npm|pnpm|yarn|bun)@(\d+)/.exec(value) : null
+  return match ? { name: match[1] as PackageManager['name'], major: Number(match[2]) } : undefined
+}
+
 /**
- * The lockfile says which package manager a project uses; npx always reports npm. A workspace member keeps
- * no lockfile of its own, so the workspace root is looked at too. Without a lockfile, the manager that ran us.
+ * Which package manager a project uses: its `packageManager` field, then its lockfile; npx always reports npm.
+ * A workspace member keeps neither of its own, so the workspace root is looked at too. With neither anywhere,
+ * the manager that ran us.
  */
 export function projectPackageManager(dir: string, userAgent: string | undefined): PackageManager {
   const root = workspaceRoot(dir)
-  for (const folder of root === undefined ? [dir] : [dir, root]) {
+  const folders = root === undefined ? [dir] : [dir, root]
+  for (const folder of folders) {
+    const declared = fromPackageManagerField(readPackageJson(folder)?.packageManager)
+    if (declared) return declared
+  }
+  for (const folder of folders) {
     for (const [file, name] of LOCKFILES) if (existsSync(join(folder, file))) return { name, major: null }
   }
   return detectPackageManager(userAgent)

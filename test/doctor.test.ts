@@ -58,3 +58,12 @@ describe('doctor --check', () => {
     expect(await doctor(['--check'], dir)).toBe(2)
   })
 })
+
+describe('doctor with a package.json that has a byte order mark', () => {
+  it('reads it, instead of saying it is not valid JSON', async () => {
+    const bom = String.fromCharCode(0xfeff)
+    writeFileSync(join(dir, 'package.json'), `${bom}${JSON.stringify({ name: 'app', dependencies: { primevue: '4.5.5' } })}`)
+    installed('primevue', 'MIT')
+    expect(await doctor(['--check'], dir)).toBe(0)
+  })
+})

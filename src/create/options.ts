@@ -81,3 +81,18 @@ export function parseCreateArgs(argv: string[]): { answers: Partial<Answers>; ye
   }
   return { answers, yes, errors }
 }
+
+/**
+ * Decides whether create asks questions. npm keeps `--yes` for itself and exports `npm_config_yes=true` to the
+ * command it runs, so without a terminal that is honoured. In a terminal it is ignored: `npx --yes` only means
+ * "do not ask before downloading". Without a terminal and without a yes, there is nobody to answer a prompt.
+ */
+export function decideYes(yes: boolean, stdinIsTTY: boolean | undefined, npmConfigYes: string | undefined): { yes: boolean; problem: string | null } {
+  if (yes || stdinIsTTY) return { yes, problem: null }
+  if (npmConfigYes === 'true') return { yes: true, problem: null }
+  return {
+    yes: false,
+    problem:
+      'Not running in a terminal, so create-nuxt-primevue cannot ask its questions. Pass --yes to accept the defaults for anything not given by a flag, for example: npm create nuxt-primevue@latest my-app -- --yes',
+  }
+}
