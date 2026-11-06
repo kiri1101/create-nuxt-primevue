@@ -1,0 +1,7 @@
+node_modules
+dist
+reports
+.stryker-tmp
+template/.nuxt
+template/.output
+template/node_modules

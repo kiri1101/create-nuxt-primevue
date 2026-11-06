@@ -1,0 +1,28 @@
+{
+  "name": "create-nuxt-primevue",
+  "version": "0.0.0",
+  "description": "Create Nuxt 4 + PrimeVue 4 + Tailwind 4 projects on free MIT versions.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Jordan Tukum Folem",
+  "bin": {
+    "create-nuxt-primevue": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "template"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
