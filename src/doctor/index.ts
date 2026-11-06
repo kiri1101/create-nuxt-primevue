@@ -3,17 +3,17 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { checkProject } from '../../template/scripts/check-licences.mjs'
-import { installArgs, projectPackageManager, scriptArgs } from '../pm.ts'
+import { installArgs, projectPackageManager, scriptArgs, type PackageManager } from '../pm.ts'
 import { capture, run } from '../run.ts'
 import { gitGate } from './gate.ts'
-import { GUARD_COMMAND, GUARD_FILE, addGuard, guardProblem } from './guard.ts'
+import { GUARD_COMMAND, GUARD_FILE, addGuard, guardProblem, guardUndo } from './guard.ts'
 import { applyChanges, indirectLines, planFix, undoAdvice } from './plan.ts'
 import { parsePackageJson } from '../package-json.ts'
+import { packageVersion } from '../version.ts'
 import { setupWarnings } from './warnings.ts'
 
 // From src/doctor or dist/doctor, two levels up is the package root, where `template/` ships.
 const GUARD_SOURCE = fileURLToPath(new URL('../../template/scripts/check-licences.mjs', import.meta.url))
-const GUARD_UNDO = 'To remove the guard again, run "git checkout package.json" and delete scripts/check-licences.mjs.'
 
 const log = (line = '') => console.log(line)
 
@@ -32,7 +32,7 @@ async function gateProblem(dir: string): Promise<string | null> {
   return gitGate(isRepo, status.code === 0 ? status.stdout : 'unknown', tracked, inside.code === 127)
 }
 
-async function offerGuard(dir: string): Promise<void> {
+async function offerGuard(dir: string, fixedWith: PackageManager | null): Promise<void> {
   const file = join(dir, 'package.json')
   const text = readFileSync(file, 'utf8')
   const problem = guardProblem(text, existsSync(join(dir, GUARD_FILE)))
@@ -54,12 +54,16 @@ async function offerGuard(dir: string): Promise<void> {
 /** Returns the process exit code: 0 fine, 1 a problem remains, 2 the project could not be scanned. */
 export async function doctor(argv: string[], cwd: string = process.cwd()): Promise<number> {
   if (argv.includes('--help') || argv.includes('-h')) {
-    log('Usage: create-nuxt-primevue doctor [--check | --yes-fix]')
+    log('Usage: create-nuxt-primevue doctor [--check | --yes-fix | --version]')
+    return 0
+  }
+  if (argv.includes('--version')) {
+    log(packageVersion())
     return 0
   }
   const unknown = argv.filter((a) => a !== '--check' && a !== '--yes-fix')
   if (unknown.length > 0) {
-    console.error(`Unknown option ${unknown[0]}. Usage: create-nuxt-primevue doctor [--check | --yes-fix]`)
+    console.error(`Unknown option ${unknown[0]}. Usage: create-nuxt-primevue doctor [--check | --yes-fix | --version]`)
     return 2
   }
   const check = argv.includes('--check')
@@ -110,7 +114,7 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
     printWarnings()
     if (check || !process.stdin.isTTY) return 0
     const problem = await gateProblem(cwd)
-    if (problem === null) await offerGuard(cwd)
+    if (problem === null) await offerGuard(cwd, null)
     else log(`- The licence guard was not offered: ${problem}`)
     return 0
   }
@@ -199,6 +203,6 @@ export async function doctor(argv: string[], cwd: string = process.cwd()): Promi
   log('✓ Licence check passes')
   log('Nothing was committed. Review the change with "git diff". ' + undo)
 
-  if (!yesFix) await offerGuard(cwd)
+  if (!yesFix) await offerGuard(cwd, pm)
   return 0
 }

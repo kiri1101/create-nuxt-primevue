@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addGuard, guardProblem } from '../src/doctor/guard.ts'
+import { addGuard, guardProblem, guardUndo } from '../src/doctor/guard.ts'
 
 const CMD = 'node scripts/check-licences.mjs'
 const pkg = (scripts: string, eol = '\n') =>
@@ -90,5 +90,27 @@ describe('guardProblem: when the guard must not be added', () => {
   it('does not mistake a "check:licences" key outside scripts for a clash', () => {
     const text = '{ "x": { "check:licences": 1 }, "scripts": { "build": "nuxt build" } }'
     expect(guardProblem(text, false)).toBeNull()
+  })
+})
+
+describe('guardUndo', () => {
+  it('on a project that was not just fixed, a package.json checkout is enough', () => {
+    expect(guardUndo(null)).toBe('To remove the guard again, run "git checkout package.json" and delete scripts/check-licences.mjs.')
+  })
+  it('after a fix, a package.json checkout would also revert the pins, so it is not suggested', () => {
+    const text = guardUndo({ name: 'pnpm', major: 9 })
+    expect(text).not.toContain('git checkout package.json')
+    expect(text).toBe(
+      'To remove the guard again, delete scripts/check-licences.mjs, take "node scripts/check-licences.mjs && " out of the "build" script and delete the "check:licences" script in package.json. Or undo everything: run "git checkout ." and then "pnpm install".',
+    )
+  })
+})
+
+describe('addGuard: keeps the bytes of the existing build value', () => {
+  it('does not re-encode an escape sequence in it', () => {
+    const text = '{\n  "scripts": {\n    "build": "nuxt build \\u0026\\u0026 echo done"\n  }\n}\n'
+    expect(addGuard(text).text).toBe(
+      '{\n  "scripts": {\n    "build": "node scripts/check-licences.mjs && nuxt build \\u0026\\u0026 echo done",\n    "check:licences": "node scripts/check-licences.mjs"\n  }\n}\n',
+    )
   })
 })

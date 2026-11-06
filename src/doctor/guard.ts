@@ -1,3 +1,4 @@
+import type { PackageManager } from '../pm.ts'
 import { members, skipWs } from './plan.ts'
 
 export const GUARD_FILE = 'scripts/check-licences.mjs'
@@ -15,6 +16,16 @@ function locate(text: string): { scripts: Member[]; build: Member } | null {
 }
 
 const valueOf = (text: string, m: Member): unknown => JSON.parse(text.slice(m.start, m.end))
+
+/**
+ * How to take the guard out again. After a fix nothing is committed, so checking out package.json would also
+ * revert the pins and leave v5 declared with v4 installed; then the script entries are removed by hand, or
+ * everything is undone. `fixedWith` is the package manager of a fix just made, or null when there was none.
+ */
+export function guardUndo(fixedWith: PackageManager | null): string {
+  if (fixedWith === null) return `To remove the guard again, run "git checkout package.json" and delete ${GUARD_FILE}.`
+  return `To remove the guard again, delete ${GUARD_FILE}, take "${GUARD_COMMAND} && " out of the "build" script and delete the "check:licences" script in package.json. Or undo everything: run "git checkout ." and then "${fixedWith.name} install".`
+}
 
 /** Returns why the guard must not be added to this package.json, or null when it can be. */
 export function guardProblem(text: string, guardFileExists: boolean): string | null {
@@ -34,7 +45,8 @@ export function guardProblem(text: string, guardFileExists: boolean): string | n
 
 /**
  * Puts the guard in front of the build script and adds a `check:licences` script after it.
- * Only those two places change: every other byte of the file is kept.
+ * Only those two places change: every other byte of the file is kept, the existing build value included
+ * (the prefix goes right after its opening quote, so an escape sequence in it is not re-encoded).
  */
 export function addGuard(text: string): { text: string; before: string; after: string } {
   const found = locate(text)
@@ -50,7 +62,7 @@ export function addGuard(text: string): { text: string; before: string; after: s
   const added = `${separator}"check:licences": ${JSON.stringify(GUARD_COMMAND)}`
 
   return {
-    text: text.slice(0, found.build.start) + JSON.stringify(after) + added + text.slice(found.build.end),
+    text: text.slice(0, found.build.start + 1) + `${GUARD_COMMAND} && ` + text.slice(found.build.start + 1, found.build.end) + added + text.slice(found.build.end),
     before,
     after,
   }

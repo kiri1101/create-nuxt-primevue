@@ -1,10 +1,11 @@
-import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { detectPackageManager, installArgs, scriptArgs } from '../pm.ts'
 import { run } from '../run.ts'
 import { applyAnswers } from './apply.ts'
 import { initRepo } from './git.ts'
+import { packageVersion } from '../version.ts'
 import { type Answers, DEFAULTS, decideYes, parseCreateArgs, validateProjectName } from './options.ts'
 import { askMissing } from './prompts.ts'
 import { copyTemplate, ensureEmptyTarget, projectNameProblem } from './scaffold.ts'
@@ -14,7 +15,7 @@ const TEMPLATE_DIR = fileURLToPath(new URL('../../template', import.meta.url))
 
 export const USAGE = [
   'Usage: create-nuxt-primevue [project-name] [options]',
-  '       create-nuxt-primevue doctor [--check | --yes-fix]',
+  '       create-nuxt-primevue doctor [--check | --yes-fix | --version]',
   '',
   'Options:',
   '  --theme <aura|lara|nora|material>   --primary <emerald|blue|violet|#rrggbb>',
@@ -22,11 +23,6 @@ export const USAGE = [
   '  --yes, -y   accept the defaults for anything not given (needed without a terminal)',
   '  --help, -h  show this text        --version   show the version',
 ].join('\n')
-
-function packageVersion(): string {
-  const file = fileURLToPath(new URL('../../package.json', import.meta.url))
-  return (JSON.parse(readFileSync(file, 'utf8')) as { version: string }).version
-}
 
 /** Returns the process exit code. */
 export async function create(argv: string[]): Promise<number> {
