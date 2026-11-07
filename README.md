@@ -73,7 +73,7 @@ As of 2026-11-06:
 | `@primeuix/themes` | 3.1.0 | **2.0.3** |
 | `primeicons` | 8.0.2 | **7.0.0** |
 
-`tailwindcss`, `@tailwindcss/vite`, `tailwindcss-primeui` and `nuxt` are MIT. Staying on v4 means no new v4 features and nothing that exists only in v5. Check PrimeTek's current terms (https://primeui.dev/licenses) for what applies to you; this README may be out of date.
+`tailwindcss`, `@tailwindcss/vite`, `tailwindcss-primeui` and `nuxt` are MIT. Staying on v4 means no new v4 features and nothing that exists only in v5. If you'd rather have a library that keeps getting updates under MIT, [OpenVue](https://openvue.dev) is a community-maintained fork of PrimeVue 4.5.5; this project isn't connected to it and hasn't tested it. Check PrimeTek's current terms (https://primeui.dev/licenses) for what applies to you; this README may be out of date.
 
 ## The guide
 
